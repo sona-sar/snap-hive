@@ -139,7 +139,7 @@ export default function MapScreen({ navigation }) {
       TypeInfoSheet.current?.present();
     }
     function sendToDatabase(){
-      setDeal('')
+      setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
       setSendButton(true)
@@ -216,7 +216,7 @@ export default function MapScreen({ navigation }) {
 
   function deletePin(){
     if ((lastAddedPinIndex !== null) && (sendButton == false)) {
-      setDeal('')
+      setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
       setCheckAllDay(false)
