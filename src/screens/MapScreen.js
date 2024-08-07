@@ -61,7 +61,7 @@ export default function MapScreen({ navigation }) {
       //pin disappears after 7 days of NO DEALS at the place
     },
   ])
-  const infoData = [
+  const infoDataAddDeal = [
   {
     title: "Time",
     subtitle: "From what time is this deal available?",
@@ -82,6 +82,21 @@ export default function MapScreen({ navigation }) {
   },
 ];
 
+const infoDataMakePin = [
+  {
+    title: "Time",
+    subtitle: "From what time is this deal available?",
+    onPress: TimeInfo,
+    disabled: false
+  },
+  {
+    title: "Resource Type",
+    subtitle: "Select all filters that apply to this resource.",
+    onPress: TypeInfo,
+    disabled: false
+  },
+]
+
   const resourceTypes = [{type: "Grocery Store", pic: require("../../assets/mapfeature/BeeInBasket.png"), color: "#2EAD78"},
      {type: "Community Garden", pic: require("../../assets/mapfeature/BeeOnEggplant.png"), color: "#FFC000"},
      {type: "Snap EBT", pic: require("../../assets/mapfeature/BeeBalling.png"), color: "#B4649D"},
@@ -98,11 +113,14 @@ export default function MapScreen({ navigation }) {
   const [sendButton, setSendButton] = useState(false);
   const [showPins, setShowPins] = useState(false); 
   const PinInfoSheet = useRef(null);
+  const DealInfoSheet = useRef(null)
   const TimeInfoSheet = useRef(null);
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
   const [expanded, setExpanded] = useState(false);
   const [checkAllDay, setCheckAllDay] = useState(true);
+  const [dealInformation, setDealInformation] = useState('');
+  const [description, setDescription] = useState('');
   const [pinDescription, setPinDescription] = useState('');
   const [organization, setOrganization] = useState('');
   const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
@@ -364,13 +382,13 @@ export default function MapScreen({ navigation }) {
     const startTime = String(startDate).split(" ")[4]
     const endTime = String(endDate).split(" ")[4]
       console.log("Here",startTime !== "00:00:00" || endTime!== "00:00:00")
-    if (((organization !== '') && (pinDescription !== '')) && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay !== true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
+    if (((description !== '') && (dealInformation !== '')) && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay !== true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
       setIsPinConditionMet(true)
     }
     else{
       setIsPinConditionMet(false)
     }
-  }, [organization, pinDescription, startDate, endDate, checkAllDay]);
+  }, [description, dealInformation, startDate, endDate, checkAllDay]);
 
   let text = "Waiting...";
   text = JSON.stringify(location);
@@ -402,7 +420,7 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
         ref={PinInfoSheet}
         index={0}
-        snapPoints={["50%", "79%"]}
+        snapPoints={["61%"]}
         onDismiss={deletePin}
       >
         <View>
@@ -429,6 +447,64 @@ export default function MapScreen({ navigation }) {
           onChangeText={(organization)=> setOrganization(organization)}
           value ={organization}
           />
+          {infoDataMakePin.map((item, index) => (
+          <TouchableOpacity
+          key={index}
+          style={styles.moreInfoContainer}
+          onPress={item.onPress}
+          disabled={item.disabled}
+          >
+          <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
+            <View flexDirection={"column"}>
+              <Text style={styles.moreInfoTitle}>{item.title}</Text>
+              <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+            </View>
+            <Icon name="arrow-forward-ios" size={15} />
+          </View>
+        </TouchableOpacity>
+          ))}
+          <Button
+          onPress = {()=>sendToDatabase()} 
+           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
+           style={styles.postPin}>
+            <Text style={styles.sendButton}>Send</Text>
+            <Icon color={"white"} name="send" size={"15"}/>
+          </Button>
+        </View>
+      </BottomSheetModal>
+
+
+      <BottomSheetModal
+        ref={DealInfoSheet}
+        index={0}
+        snapPoints={["50%", "79%"]}
+        onDismiss={deletePin}
+      >
+        <View>
+          <View flexDirection={"row"} alignItems= {'center'}>
+            <Text style={styles.headerPinSheet}> SnapServe Pin</Text>
+            <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
+          </View>
+          <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
+          <View flexDirection={"row"}>
+            <Text style={styles.information}>Deal Information</Text>
+            <Text style={{color: "red"}}>*</Text>
+          </View>
+          
+          <TextInput 
+          style={styles.input} 
+          onChangeText={(dealInformation)=> setPinDescription(dealInformation)}
+          value ={dealInformation}
+          />
+          <View flexDirection={"row"}>
+          <Text style={styles.information}>Organization Name</Text>
+          <Text style={{color: "red"}}>*</Text>
+          </View>
+          <TextInput 
+          style={styles.input}
+          onChangeText={(description)=> setOrganization(description)}
+          value ={description}
+          />
 
           <TouchableOpacity onPress={handleUserClick}>
           <View paddingTop={30} style={styles.moreInfoContainer}>
@@ -445,7 +521,7 @@ export default function MapScreen({ navigation }) {
             </View>
           </View>
           </TouchableOpacity>
-          {infoData.map((item, index) => (
+          {infoDataAddDeal.map((item, index) => (
           <TouchableOpacity
           key={index}
           style={styles.moreInfoContainer}
@@ -471,81 +547,6 @@ export default function MapScreen({ navigation }) {
           </Button>
         </View>
       </BottomSheetModal>
-
-
-      {/* <BottomSheetModal
-        ref={PinInfoSheet}
-        index={0}
-        snapPoints={["50%", "79%"]}
-        onDismiss={deletePin}
-      >
-        <View>
-          <View flexDirection={"row"} alignItems= {'center'}>
-            <Text style={styles.headerPinSheet}> SnapServe Pin</Text>
-            <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
-          </View>
-          <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
-          <View flexDirection={"row"}>
-            <Text style={styles.information}>Deal Information</Text>
-            <Text style={{color: "red"}}>*</Text>
-          </View>
-          
-          <TextInput 
-          style={styles.input} 
-          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
-          value ={pinDescription}
-          />
-          <View flexDirection={"row"}>
-          <Text style={styles.information}>Organization Name</Text>
-          <Text style={{color: "red"}}>*</Text>
-          </View>
-          <TextInput 
-          style={styles.input}
-          onChangeText={(organization)=> setOrganization(organization)}
-          value ={organization}
-          />
-
-          <TouchableOpacity onPress={handleUserClick}>
-          <View paddingTop={30} style={styles.moreInfoContainer}>
-            <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
-              <View flexDirection={"column"}>
-                <Text style={styles.moreInfoTitle}>All Day</Text>
-                <Text style={styles.moreInfoSub}>This deal runs for 24 hours.</Text>
-              </View>
-              <Ionicons
-            name={clickedUsers[0] ? "checkmark-circle" : "ellipse-outline"}
-            size={24}
-            color={clickedUsers[0] ? "#3CB2E2" : "lightgrey"}
-            />
-            </View>
-          </View>
-          </TouchableOpacity>
-          {infoData.map((item, index) => (
-          <TouchableOpacity
-          key={index}
-          style={styles.moreInfoContainer}
-          onPress={item.onPress}
-          disabled={item.disabled}
-          >
-          <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
-            <View flexDirection={"column"}>
-              <Text style={styles.moreInfoTitle}>{item.title}</Text>
-              <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
-            </View>
-            <Icon name="arrow-forward-ios" size={15} />
-          </View>
-        </TouchableOpacity>
-          ))}
-          <Button
-          disabled={!isPinConditionMet}
-          onPress = {()=>sendToDatabase()} 
-           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
-           style={styles.postPin}>
-            <Text style={styles.sendButton}>Send</Text>
-            <Icon color={"white"} name="send" size={"15"}/>
-          </Button>
-        </View>
-      </BottomSheetModal> */}
 
 
 
