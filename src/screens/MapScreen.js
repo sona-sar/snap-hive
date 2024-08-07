@@ -142,6 +142,7 @@ const infoDataMakePin = [
   const [sendButton, setSendButton] = useState(false);
   const [showPins, setShowPins] = useState(false); 
   const PinInfoSheet = useRef(null);
+  const [pinInfoModal, setPinInfoModal] = useState({});
   const DealInfoSheet = useRef(null)
   const TimeInfoSheet = useRef(null);
   const RepeatInfoSheet = useRef(null);
