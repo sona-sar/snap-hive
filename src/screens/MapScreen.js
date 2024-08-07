@@ -50,26 +50,9 @@ export default function MapScreen({ navigation }) {
     loadAsyncFonts();
   }, []);
 
-  const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
-  const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
-  const [sendButton, setSendButton] = useState(false);
-  const [showPins, setShowPins] = useState(false); 
-  const [pinInfoModal, setPinInfoModal] = useState({});
-  const PinInfoSheet = useRef(null);
-  const TimeInfoSheet = useRef(null);
-  const RepeatInfoSheet = useRef(null);
-  const TypeInfoSheet = useRef(null);
-  const DealInfoSheet = useRef(null)
-
 
   const PinModalRef = useRef(null);
 
-  const [expanded, setExpanded] = useState(false);
-  const [checkAllDay, setCheckAllDay] = useState(true);
-  const [pinDescription, setPinDescription] = useState('');
-  const [organization, setOrganization] = useState('');
-  const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
-  const [clickedUsers, setClickedUsers] = useState({}); // State to track clicked users
 
   const bottomSheetRef = useRef(null);
   const snapPoints = ["74%", "90%"];
