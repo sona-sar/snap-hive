@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, startTransition } from "react";
 import "react-native-gesture-handler";
 import MapView, { Marker } from "react-native-maps";
 import AntDesign from '@expo/vector-icons/AntDesign';
@@ -66,27 +66,31 @@ export default function MapScreen({ navigation }) {
     title: "Time",
     subtitle: "From what time is this deal available?",
     onPress: TimeInfo,
+    disabled: false
   },
   {
     title: "Repeat",
     subtitle: "If applicable, enter the days this deal reoccurs.",
     onPress: RepeatInfo,
+    disabled: false
   },
   {
     title: "Resource Type",
     subtitle: "Select all filters that apply to this resource.",
     onPress: TypeInfo,
+    disabled: false
   },
 ];
 
   const resourceTypes = [{type: "Grocery Store", pic: require("../../assets/mapfeature/BeeInBasket.png"), color: "#2EAD78"},
-     {type: "Community Garden", pic: require("../../assets/mapfeature/BeeOnEggplant.png"), color: "#AEC251"},
+     {type: "Community Garden", pic: require("../../assets/mapfeature/BeeOnEggplant.png"), color: "#FFC000"},
      {type: "Snap EBT", pic: require("../../assets/mapfeature/BeeBalling.png"), color: "#B4649D"},
      {type: "Restaurant", pic: require("../../assets/mapfeature/BeeWillEatYou.png"), color: "#FFBAC6"},
      {type: "Food Pantry", pic: require("../../assets/mapfeature/BeeInBagel.png"), color: "#0894FA"},
-     {type: "other", pic: require("../../assets/mapfeature/BeeSmells.png"), color: "red"}
+     {type: "other", pic: require("../../assets/mapfeature/BeeSmells.png"), color: "#EDEEEF"}
     ]
   const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
+  const [isPinConditionMet, setIsPinConditionMet] = useState(false);
   const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
   const initialDate = new Date();
   initialDate.setHours(0, 0, 0, 0);
@@ -159,7 +163,10 @@ export default function MapScreen({ navigation }) {
   }
   const handleUserClick = () => {
     setCheckAllDay(!checkAllDay)
-    console.log(checkAllDay)
+    if(checkAllDay !== false){
+      setStartDate(initialDate)
+      setEndDate(initialDate)
+    }
     setClickedUsers((prevState) => {
       const newState = { ...prevState, [0]: !prevState[0] };
       return newState;
@@ -201,6 +208,12 @@ export default function MapScreen({ navigation }) {
     function CloseTime(){
       TimeInfoSheet.current?.close();
     }
+    function CloseRepeat(){
+      RepeatInfoSheet.current?.close();
+    }
+    function CloseType(){
+      TypeInfoSheet.current?.close();
+    }
     function animateElement(){
       Animated.timing(scaleAnimate, {
         toValue: 100,
@@ -224,6 +237,7 @@ export default function MapScreen({ navigation }) {
       setSendButton(true)
       setCheckAllDay(false)
       PinInfoSheet.current?.close();
+      setIsPinConditionMet(false)
       // console.log("sent")
       //push downn the modal
     }
@@ -297,6 +311,7 @@ export default function MapScreen({ navigation }) {
 
   function deletePin(){
     if ((lastAddedPinIndex !== null) && (sendButton == false)) {
+      setIsPinConditionMet(false)
       setStartDate(initialDate)
       setEndDate(initialDate)
       setPinDescription('')
@@ -340,6 +355,23 @@ export default function MapScreen({ navigation }) {
     })();
   }, []);
 
+  function splitAfterNCharacters(str, n) {
+    const regex = new RegExp(`.{1,${n}}`, 'g');
+    return str.match(regex);
+  }
+
+  useEffect(() => {
+    const startTime = String(startDate).split(" ")[4]
+    const endTime = String(endDate).split(" ")[4]
+      console.log("Here",startTime !== "00:00:00" || endTime!== "00:00:00")
+    if (((organization !== '') && (pinDescription !== '')) && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay !== true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
+      setIsPinConditionMet(true)
+    }
+    else{
+      setIsPinConditionMet(false)
+    }
+  }, [organization, pinDescription, startDate, endDate, checkAllDay]);
+
   let text = "Waiting...";
   text = JSON.stringify(location);
 
@@ -365,25 +397,33 @@ export default function MapScreen({ navigation }) {
         </View> */}
         {showLocations()}
       </MapView>
+
+
       <BottomSheetModal
         ref={PinInfoSheet}
         index={0}
-        snapPoints={["50%", "78%"]}
+        snapPoints={["50%", "79%"]}
         onDismiss={deletePin}
       >
         <View>
           <View flexDirection={"row"} alignItems= {'center'}>
-            <Text style={styles.headerPinSheet}> SnapServe Pin</Text>
+            <Text style={styles.headerPinSheet}> Hive Pin</Text>
             <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
           </View>
           <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
-          <Text style={styles.information}>Deal Information</Text>
+          <View flexDirection={"row"}>
+            <Text style={styles.information}>Organization Name</Text>
+            <Text style={{color: "red"}}>*</Text>
+          </View>
+          
           <TextInput 
           style={styles.input} 
           onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
           value ={pinDescription}
           />
-          <Text style={styles.information}>Organization Name</Text>
+          <View flexDirection={"row"}>
+          <Text style={styles.information}>Description</Text>
+          </View>
           <TextInput 
           style={styles.input}
           onChangeText={(organization)=> setOrganization(organization)}
@@ -410,6 +450,7 @@ export default function MapScreen({ navigation }) {
           key={index}
           style={styles.moreInfoContainer}
           onPress={item.onPress}
+          disabled={item.disabled}
           >
           <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
             <View flexDirection={"column"}>
@@ -421,6 +462,7 @@ export default function MapScreen({ navigation }) {
         </TouchableOpacity>
           ))}
           <Button
+          disabled={!isPinConditionMet}
           onPress = {()=>sendToDatabase()} 
            buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
            style={styles.postPin}>
@@ -429,10 +471,88 @@ export default function MapScreen({ navigation }) {
           </Button>
         </View>
       </BottomSheetModal>
+
+
+      {/* <BottomSheetModal
+        ref={PinInfoSheet}
+        index={0}
+        snapPoints={["50%", "79%"]}
+        onDismiss={deletePin}
+      >
+        <View>
+          <View flexDirection={"row"} alignItems= {'center'}>
+            <Text style={styles.headerPinSheet}> SnapServe Pin</Text>
+            <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
+          </View>
+          <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
+          <View flexDirection={"row"}>
+            <Text style={styles.information}>Deal Information</Text>
+            <Text style={{color: "red"}}>*</Text>
+          </View>
+          
+          <TextInput 
+          style={styles.input} 
+          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
+          value ={pinDescription}
+          />
+          <View flexDirection={"row"}>
+          <Text style={styles.information}>Organization Name</Text>
+          <Text style={{color: "red"}}>*</Text>
+          </View>
+          <TextInput 
+          style={styles.input}
+          onChangeText={(organization)=> setOrganization(organization)}
+          value ={organization}
+          />
+
+          <TouchableOpacity onPress={handleUserClick}>
+          <View paddingTop={30} style={styles.moreInfoContainer}>
+            <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
+              <View flexDirection={"column"}>
+                <Text style={styles.moreInfoTitle}>All Day</Text>
+                <Text style={styles.moreInfoSub}>This deal runs for 24 hours.</Text>
+              </View>
+              <Ionicons
+            name={clickedUsers[0] ? "checkmark-circle" : "ellipse-outline"}
+            size={24}
+            color={clickedUsers[0] ? "#3CB2E2" : "lightgrey"}
+            />
+            </View>
+          </View>
+          </TouchableOpacity>
+          {infoData.map((item, index) => (
+          <TouchableOpacity
+          key={index}
+          style={styles.moreInfoContainer}
+          onPress={item.onPress}
+          disabled={item.disabled}
+          >
+          <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
+            <View flexDirection={"column"}>
+              <Text style={styles.moreInfoTitle}>{item.title}</Text>
+              <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+            </View>
+            <Icon name="arrow-forward-ios" size={15} />
+          </View>
+        </TouchableOpacity>
+          ))}
+          <Button
+          disabled={!isPinConditionMet}
+          onPress = {()=>sendToDatabase()} 
+           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
+           style={styles.postPin}>
+            <Text style={styles.sendButton}>Send</Text>
+            <Icon color={"white"} name="send" size={"15"}/>
+          </Button>
+        </View>
+      </BottomSheetModal> */}
+
+
+
       <BottomSheetModal
       ref={TimeInfoSheet}
       index={0}
-      snapPoints={["49%"]}
+      snapPoints={["45%"]}
       >
         <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
           <Text style={styles.InfoHeader} marginBottom={15}> Time </Text>
@@ -488,9 +608,22 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
       ref={RepeatInfoSheet}
       index={0}
-      snapPoints={["46%"]}
+      snapPoints={["45%"]}
       >
+      <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
         <Text style={styles.InfoHeader} marginBottom={15}> Repeat </Text>
+        <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+
+      </View>
         <View style={styles.moreInfoContainer}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>Repeat on</Text>
@@ -516,10 +649,22 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
       ref={TypeInfoSheet}
       index={0}
-      snapPoints={["65%"]}
+      snapPoints={["64%"]}
       >
         <View>
-                  <Text style ={styles.InfoHeader}>Type</Text>
+          <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
+              <Text style ={styles.InfoHeader}>Type</Text>
+              <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+          </View>
                   <Text style={{textAlign:'center', color: "#646567", size: 10}} >Select the type of resource</Text>
           <FlatList
           data={resourceTypes}
