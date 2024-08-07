@@ -248,7 +248,6 @@ useEffect(() => {
     return null
   }
 
-  
 
   const handleMapPress = (e) => {
     if(showPins){
@@ -475,8 +474,96 @@ useEffect(() => {
         index={0}
         snapPoints={snapPoints}
       >
-          <Text>{pinInfoModal?.title}</Text>
-          <Text>{pinInfoModal?.description}</Text>
+        <View style = {{marginTop:0, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:20}}>
+            <View style = {styles.imageContainer}>
+              <Image style = {styles.mainStories} src="https://wallpapercave.com/wp/JTpVKUS.jpg" ></Image>
+            </View>
+            <View style = {{
+              display:"flex",
+            }}>
+              
+              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{pinInfoModal?.title}</Text>
+              <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:12}}>23 Deals Claimed</Text>
+              <View style={{
+                display:"flex",
+                flexDirection:"row",
+                gap:4,
+                alignItems:"center"
+              }}>
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="staro" size={16} color="#0894FA" />
+                <Text style = {{fontSize:12, color:"#646567"}}>2034 Shares</Text>
+              </View>
+              
+            </View>
+          </View>
+          <View style = {{
+            backgroundColor:"white",
+            marginRight:20,
+            marginLeft:20,
+            marginTop:20,
+            borderRadius:10,
+            paddingLeft:15,
+            paddingRight:15,
+            paddingTop:20,
+            paddingBottom:20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.1,
+            shadowRadius: 3,
+          }}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{pinInfoModal?.title}</Text>
+            <Text>{pinInfoModal?.description}</Text>
+          </View>
+          
+          <View style = {{
+            backgroundColor:"white",
+            marginRight:20,
+            marginLeft:20,
+            marginTop:20,
+            borderRadius:10,
+            paddingLeft:15,
+            paddingRight:15,
+            paddingTop:20,
+            paddingBottom:20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.1,
+            shadowRadius: 3,
+          }}>
+          <View style = {styles.infoTimeSection}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>Time</Text>
+            <View style = {{display:"flex", flexDirection:"row", gap:10, alignItems:"center"}}>
+              <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                <Text style = {{color:"#0CADEF", fontSize:13}}>11:00 AM</Text>
+              </View>
+              <Text style = {{color:"#0CADEF", fontWeight:"bold"}}>-</Text>
+              <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                <Text style = {{color:"#0CADEF", fontSize:13}}>01:00 PM</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style = {{marginTop:20,}}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>Repeat</Text>
+            <View flexDirection={"row"} height={80} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
+          {weekName.map((week) => {
+            return(
+            <Pressable onPress={()=>{selectRepeatDays(week)}} height={40} width={40} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"} borderRadius={20}>
+              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
+    fontWeight: "500",
+    textAlign: 'center',
+    paddingVertical: 12,}} >{week}</Text>
+            </Pressable>
+            )
+          })}
+        </View>
+          </View>
+
+          </View>
       </BottomSheetModal>
       <View style={[styles.mapFooter, expanded ? styles.expanded : null]}> 
         <View style={styles.locationContainer}>
@@ -500,7 +587,8 @@ useEffect(() => {
               }}>
                 <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
                
-              </View>
+               </View>
+               
               <View style = {{marginTop:-25, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:20}}>
                 <View style = {styles.imageContainer}>
                   <Image style = {styles.mainStories} src="https://wallpapercave.com/wp/JTpVKUS.jpg" ></Image>
@@ -526,7 +614,7 @@ useEffect(() => {
                   </View>
                   
                 </View>
-              </View>
+              </View> 
 
               <View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}  style = {styles.categoryScrollView}>
