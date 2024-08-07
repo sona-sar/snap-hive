@@ -4,7 +4,7 @@ import MapView, { Marker } from "react-native-maps";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-
+import DateTimePicker from '@react-native-community/datetimepicker';
 import {
   StyleSheet,
   View,
@@ -15,11 +15,13 @@ import {
   Text,
   TouchableOpacity,
   Pressable,
+  FlatList,
+  Animated,
 } from "react-native";
 import { Button, ButtonGroup, Icon, withTheme, CheckBox } from '@rneui/themed';
 import {BottomSheetModal, BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { supabase } from "../utils/hooks/supabase";
@@ -76,8 +78,19 @@ export default function MapScreen({ navigation }) {
     onPress: TypeInfo,
   },
 ];
+
+  const resourceTypes = [{type: "Grocery Store", pic: require("../../assets/mapfeature/BeeInBasket.png"), color: "#2EAD78"},
+     {type: "Community Garden", pic: require("../../assets/mapfeature/BeeOnEggplant.png"), color: "#AEC251"},
+     {type: "Snap EBT", pic: require("../../assets/mapfeature/BeeBalling.png"), color: "#B4649D"},
+     {type: "Restaurant", pic: require("../../assets/mapfeature/BeeWillEatYou.png"), color: "#FFBAC6"},
+     {type: "Food Pantry", pic: require("../../assets/mapfeature/BeeInBagel.png"), color: "#0894FA"},
+     {type: "other", pic: require("../../assets/mapfeature/BeeSmells.png"), color: "red"}
+    ]
   const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
   const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
+  const initialDate = new Date();
+  initialDate.setHours(0, 0, 0, 0);
+  const [badge, setBadge] = useState(false)
   const [sendButton, setSendButton] = useState(false);
   const [showPins, setShowPins] = useState(false); 
   const PinInfoSheet = useRef(null);
@@ -90,6 +103,35 @@ export default function MapScreen({ navigation }) {
   const [organization, setOrganization] = useState('');
   const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
   const [clickedUsers, setClickedUsers] = useState({}); // State to track clicked users
+  const [startDate, setStartDate] = useState(initialDate);
+  const [endDate, setEndDate] = useState(initialDate);
+  const [mode, setMode] = useState('time');
+  const [show, setShow] = useState(false);
+  const scaleAnimate = useRef(new Animated.Value(50)).current
+
+  const onChange = (event, selectedDate, identifier) => {
+    const currentDate = selectedDate || (identifier === 'start' ? startDate : endDate);;
+    setShow({ ...show, [identifier]: false });
+
+    if (identifier === 'start') {
+      setStartDate(currentDate);
+    } else {
+      setEndDate(currentDate);
+    }
+  };
+
+  const showMode = (currentMode) => {
+    setShow(true);
+    setMode(currentMode);
+  };
+
+  const showDatepicker = () => {
+    showMode('date');
+  };
+
+  const showTimepicker = () => {
+    showMode('time');
+  };
 
 
   const insertData = async (currentPin) => {
@@ -124,6 +166,24 @@ export default function MapScreen({ navigation }) {
     });
   };
 
+  const renderItem = ({ item }) => (
+  <View>
+    <Pressable style={{
+          height: 100,
+          width: 100,
+          borderRadius: 50,
+          backgroundColor: `${item.color}`,
+          justifyContent:'center',
+          alignItems:'center',
+          margin: 10,
+    }}>
+      <Image  style={{height:60, width:60}}source={item.pic} ></Image>
+      {/* Add any content or functionality for the Pressable here */}
+    </Pressable>
+    <Text style={{ justifyContent: 'space-between', textAlign:'center'}} >{item.type}</Text>
+  </View>
+  );
+  
 
     function createPinInfo() {
       PinInfoSheet.current?.present();
@@ -138,14 +198,32 @@ export default function MapScreen({ navigation }) {
     function TypeInfo(){
       TypeInfoSheet.current?.present();
     }
+    function CloseTime(){
+      TimeInfoSheet.current?.close();
+    }
+    function animateElement(){
+      Animated.timing(scaleAnimate, {
+        toValue: 100,
+        duration: 2000,
+        useNativeDriver: false,
+      }).start()
+    }
+
+    const animationStyle = {
+      width: scaleAnimate,
+      height: scaleAnimate,
+    }
     function sendToDatabase(){
+      setBadge(true)
+      setStartDate(initialDate)
+      setEndDate(initialDate)
+      insertData(currentPin)
       setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
       setSendButton(true)
       setCheckAllDay(false)
       PinInfoSheet.current?.close();
-      insertData(currentPin)
       // console.log("sent")
       //push downn the modal
     }
@@ -174,7 +252,10 @@ export default function MapScreen({ navigation }) {
             coordinate = {item.location}
             title = {item.title}
             description = {item.description}
-          />
+            tracksViewChanges={false}
+            >
+              <Image style={{ height: 50, width:40 }} source={require("../../assets/mapfeature/BeePin.png")}/>
+            </Marker>
         )
       })
     }
@@ -216,6 +297,8 @@ export default function MapScreen({ navigation }) {
 
   function deletePin(){
     if ((lastAddedPinIndex !== null) && (sendButton == false)) {
+      setStartDate(initialDate)
+      setEndDate(initialDate)
       setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
@@ -272,12 +355,20 @@ export default function MapScreen({ navigation }) {
         showsMyLocationButton={true}
         onLongPress={handleMapPress}
       >
+        {/* <View height={250} position={"relative"} width={250} backgroundColor={"red"} justifyContent={"center"} alignItems={"center"} display={true?"flex":"none"}>
+          <Animated.Image source={require("../../assets/mapfeature/BeeInBasket.png")} style ={[animationStyle]}>
+
+          </Animated.Image>
+          <Pressable position={"absolute"} height={50} width={"50%"} backgroundColor={"purple"} marginTop={15} onPress={() => {setBadge(false)}}>
+
+          </Pressable>
+        </View> */}
         {showLocations()}
       </MapView>
       <BottomSheetModal
         ref={PinInfoSheet}
         index={0}
-        snapPoints={snapPoints}
+        snapPoints={["50%", "78%"]}
         onDismiss={deletePin}
       >
         <View>
@@ -330,7 +421,7 @@ export default function MapScreen({ navigation }) {
         </TouchableOpacity>
           ))}
           <Button
-          onPress = {sendToDatabase} 
+          onPress = {()=>sendToDatabase()} 
            buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
            style={styles.postPin}>
             <Text style={styles.sendButton}>Send</Text>
@@ -341,29 +432,51 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
       ref={TimeInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["49%"]}
       >
-        <Text style={styles.InfoHeader} marginBottom={15}> Time </Text>
+        <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
+          <Text style={styles.InfoHeader} marginBottom={15}> Time </Text>
+          <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+        </View>
+        
         <View style={styles.moreInfoContainer}>
             <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>Start</Text>
                 <Text style={styles.moreInfoSub}>What time does this deal begin?</Text>
               </View>
-               <CheckBox 
-               checked={checkAllDay}
-              onPress={() => setCheckAllDay(!checkAllDay)}/>
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={startDate}
+          mode={mode}
+          is24Hour={true}
+          textColor="red"
+          onChange={(event, date) => onChange(event, date, 'start')}
+        />
             </View>
          </View>
          <View color={'none'} padding={15}>
             <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>End</Text>
-                <Text style={styles.moreInfoSub}>What time does this deal End?</Text>
+                <Text style={styles.moreInfoSub}>What time does this deal end?</Text>
               </View>
-               <CheckBox 
-               checked={checkAllDay}
-              onPress={() => setCheckAllDay(!checkAllDay)}/>
+              <DateTimePicker
+          testID="dateTimePicker"
+          value={endDate}
+          mode={mode}
+          is24Hour={true}
+          onChange={(event, date) => onChange(event, date, 'end')}
+        />
             </View>
          </View>
          <Button
@@ -375,7 +488,7 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
       ref={RepeatInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["46%"]}
       >
         <Text style={styles.InfoHeader} marginBottom={15}> Repeat </Text>
         <View style={styles.moreInfoContainer}>
@@ -384,14 +497,12 @@ export default function MapScreen({ navigation }) {
                 <Text style={styles.moreInfoSub}>Select the day this deal repeats on.</Text>
               </View>
         </View>
-        <View flexDirection={"row"} height={80} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
+        <View flexDirection={"row"} height={50} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
           {weekName.map((week) => {
             return(
             <Pressable onPress={()=>{selectRepeatDays(week)}} height={40} width={40} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"} borderRadius={20}>
-              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
-    fontWeight: "500",
-    textAlign: 'center',
-    paddingVertical: 12,}} >{week}</Text>
+              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",fontWeight: "600",textAlign: 'center',paddingVertical: 12,}}
+              >{week}</Text>
             </Pressable>
             )
           })}
@@ -405,9 +516,26 @@ export default function MapScreen({ navigation }) {
       <BottomSheetModal
       ref={TypeInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["65%"]}
       >
-        <Text style ={styles.InfoHeader}>Type</Text>
+        <View>
+                  <Text style ={styles.InfoHeader}>Type</Text>
+                  <Text style={{textAlign:'center', color: "#646567", size: 10}} >Select the type of resource</Text>
+          <FlatList
+          data={resourceTypes}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.type}
+          numColumns={3}
+          scrollEnabled={false}
+          contentContainerStyle={styles.gridContainer}
+        />
+        <Button
+           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
+           style={styles.postPin}>
+            <Text style={styles.sendButton}>Save</Text>
+          </Button>
+        </View>
+
       </BottomSheetModal>
       <View style={[styles.mapFooter, expanded ? styles.expanded : null]}> 
         <View style={styles.locationContainer}>
@@ -724,6 +852,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   map: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     width: Dimensions.get("window").width,
     height: Dimensions.get("window").height,
   },
@@ -939,5 +1070,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: 'center',
     paddingVertical: 12,
-  }
+  },
+  pressable: {
+    height: 100,
+    width: 100,
+    borderRadius: 50,
+    backgroundColor: 'red',
+    justifyContent:'center',
+    alignItems:'center',
+    margin: 10,
+  },
+  gridContainer: {
+    justifyContent: 'space-between',
+    padding: 10,
+  },
 });
