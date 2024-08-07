@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, startTransition } from "react";
 import "react-native-gesture-handler";
 import MapView, { Marker } from "react-native-maps";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const loadFonts = () => {
   return Font.loadAsync({
@@ -28,11 +28,13 @@ import {
   Text,
   TouchableOpacity,
   Pressable,
+  FlatList,
+  Animated,
 } from "react-native";
 import { Button, ButtonGroup, Icon, withTheme, CheckBox } from '@rneui/themed';
 import {BottomSheetModal, BottomSheetModalProvider} from '@gorhom/bottom-sheet';
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { supabase } from "../utils/hooks/supabase";
@@ -105,24 +107,99 @@ export default function MapScreen({ navigation }) {
       //pin disappears after 7 days of NO DEALS at the place
     },
   ])
-  const infoData = [
+  const infoDataAddDeal = [
   {
     title: "Time",
     subtitle: "From what time is this deal available?",
     onPress: TimeInfo,
+    disabled: false
   },
   {
     title: "Repeat",
     subtitle: "If applicable, enter the days this deal reoccurs.",
     onPress: RepeatInfo,
+    disabled: false
   },
   {
     title: "Resource Type",
     subtitle: "Select all filters that apply to this resource.",
     onPress: TypeInfo,
+    disabled: false
   },
 ];
 
+const infoDataMakePin = [
+  {
+    title: "Time",
+    subtitle: "From what time is this deal available?",
+    onPress: TimeInfo,
+    disabled: false
+  },
+  {
+    title: "Resource Type",
+    subtitle: "Select all filters that apply to this resource.",
+    onPress: TypeInfo,
+    disabled: false
+  },
+]
+
+  const resourceTypes = [{type: "Grocery Store", pic: require("../../assets/mapfeature/BeeInBasket.png"), color: "#2EAD78"},
+     {type: "Community Garden", pic: require("../../assets/mapfeature/BeeOnEggplant.png"), color: "#FFC000"},
+     {type: "Snap EBT", pic: require("../../assets/mapfeature/BeeBalling.png"), color: "#B4649D"},
+     {type: "Restaurant", pic: require("../../assets/mapfeature/BeeWillEatYou.png"), color: "#FFBAC6"},
+     {type: "Food Pantry", pic: require("../../assets/mapfeature/BeeInBagel.png"), color: "#0894FA"},
+     {type: "other", pic: require("../../assets/mapfeature/BeeSmells.png"), color: "#EDEEEF"}
+    ]
+  const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
+  const [isPinConditionMet, setIsPinConditionMet] = useState(false);
+  const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
+  const initialDate = new Date();
+  initialDate.setHours(0, 0, 0, 0);
+  const [badge, setBadge] = useState(false)
+  const [sendButton, setSendButton] = useState(false);
+  const [showPins, setShowPins] = useState(false); 
+  const PinInfoSheet = useRef(null);
+  const DealInfoSheet = useRef(null)
+  const TimeInfoSheet = useRef(null);
+  const RepeatInfoSheet = useRef(null);
+  const TypeInfoSheet = useRef(null);
+  const [expanded, setExpanded] = useState(false);
+  const [checkAllDay, setCheckAllDay] = useState(true);
+  const [dealInformation, setDealInformation] = useState('');
+  const [description, setDescription] = useState('');
+  const [pinDescription, setPinDescription] = useState('');
+  const [organization, setOrganization] = useState('');
+  const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
+  const [clickedUsers, setClickedUsers] = useState({}); // State to track clicked users
+  const [startDate, setStartDate] = useState(initialDate);
+  const [endDate, setEndDate] = useState(initialDate);
+  const [mode, setMode] = useState('time');
+  const [show, setShow] = useState(false);
+  const scaleAnimate = useRef(new Animated.Value(50)).current
+
+  const onChange = (event, selectedDate, identifier) => {
+    const currentDate = selectedDate || (identifier === 'start' ? startDate : endDate);;
+    setShow({ ...show, [identifier]: false });
+
+    if (identifier === 'start') {
+      setStartDate(currentDate);
+    } else {
+      setEndDate(currentDate);
+    }
+  };
+
+  const showMode = (currentMode) => {
+    setShow(true);
+    setMode(currentMode);
+  };
+
+  const showDatepicker = () => {
+    showMode('date');
+  };
+
+  const showTimepicker = () => {
+    showMode('time');
+  };
 
 
   const insertData = async (currentPin) => {
@@ -168,75 +245,134 @@ useEffect(() => {
 
   const handleUserClick = () => {
     setCheckAllDay(!checkAllDay)
-    console.log(checkAllDay)
+    if(checkAllDay !== false){
+      setStartDate(initialDate)
+      setEndDate(initialDate)
+    }
     setClickedUsers((prevState) => {
       const newState = { ...prevState, [0]: !prevState[0] };
       return newState;
     });
   };
 
+  const renderItem = ({ item }) => (
+  <View>
+    <Pressable style={{
+          height: 100,
+          width: 100,
+          borderRadius: 50,
+          backgroundColor: `${item.color}`,
+          justifyContent:'center',
+          alignItems:'center',
+          margin: 10,
+    }}>
+      <Image  style={{height:60, width:60}}source={item.pic} ></Image>
+      {/* Add any content or functionality for the Pressable here */}
+    </Pressable>
+    <Text style={{ justifyContent: 'space-between', textAlign:'center'}} >{item.type}</Text>
+  </View>
+  );
+  
 
-  function createPinInfo() {
-    PinInfoSheet.current?.present();
-    setSendButton(false)
-  }
-  function TimeInfo() {
-    TimeInfoSheet.current?.present();
-  }
-  function RepeatInfo(){
-    RepeatInfoSheet.current?.present();
-  }
-  function TypeInfo(){
-    TypeInfoSheet.current?.present();
-  }
-  function DealInfo(){
-    DealInfoSheet.current?.present();
-  }
-
-  function getPinWithId(id) {
-    let temp = null;
-    pins.map((pin) => {
-      if(pin.id == id) {
-        temp = pin;
-      }
-    })
-    return temp;
-  }
-
-  function handlePinModalRef(id) {
-    if(id) {
-      let tempPin = getPinWithId(id);
-      setPinInfoModal(tempPin);
+    function createPinInfo() {
+      PinInfoSheet.current?.present();
+      setSendButton(false)
     }
-    PinModalRef?.current?.present();
-  }
-
-
-  function sendToDatabase(){
-    insertData(currentPin)
-    setPinDescription('')
-    setOrganization('')
-    setDayOfWeek([0,0,0,0,0,0,0])
-    setSendButton(true)
-    setCheckAllDay(false)
-    PinInfoSheet.current?.close();
-  }
-  function expandModal () {
-    PinInfoSheet.current?.snapToIndex(1);
-  }
-
-  function selectRepeatDays(day){
-    let dayindex = weekName.indexOf(day)
-    const newdayselect = dayofWeek.map((d,i)=> {
-      if (i == dayindex){
-        return !d
+    function TimeInfo() {
+      TimeInfoSheet.current?.present();
+    }
+    function RepeatInfo(){
+      RepeatInfoSheet.current?.present();
+    }
+    function TypeInfo(){
+      TypeInfoSheet.current?.present();
+    }
+    function DealInfo(){
+      DealInfoSheet.current?.present();
+    }
+    function CloseTime(){
+      TimeInfoSheet.current?.close();
+    }
+    function CloseRepeat(){
+      RepeatInfoSheet.current?.close();
+    }
+    function CloseType(){
+      TypeInfoSheet.current?.close();
+    }
+    function getPinWithId(id) {
+      let temp = null;
+      pins.map((pin) => {
+        if(pin.id == id) {
+          temp = pin;
+        }
+      })
+      return temp;
+    }
+  
+    function handlePinModalRef(id) {
+      if(id) {
+        let tempPin = getPinWithId(id);
+        setPinInfoModal(tempPin);
       }
-      else{
-        return d
-      }
-    })
-    setDayOfWeek(newdayselect)
-  }
+      PinModalRef?.current?.present();
+    }
+    function animateElement(){
+      Animated.timing(scaleAnimate, {
+        toValue: 100,
+        duration: 2000,
+        useNativeDriver: false,
+      }).start()
+    }
+    const animationStyle = {
+      width: scaleAnimate,
+      height: scaleAnimate,
+    }
+
+    function sendToDatabase(){
+      insertData(currentPin)
+      setBadge(true)
+      setStartDate(initialDate)
+      setEndDate(initialDate)
+      insertData(currentPin)
+      setPinDescription('')
+      setOrganization('')
+      setDayOfWeek([0,0,0,0,0,0,0])
+      setSendButton(true)
+      setCheckAllDay(false)
+      PinInfoSheet.current?.close();
+      insertData(currentPin)
+      setIsPinConditionMet(false)
+      // console.log("sent")
+      //push downn the modal
+    }
+    function selectRepeatDays(day){
+      let dayindex = weekName.indexOf(day)
+      const newdayselect = dayofWeek.map((d,i)=> {
+        if (i == dayindex){
+          return !d
+        }
+        else{
+          return d
+        }
+      })
+      setDayOfWeek(newdayselect)
+    }
+    function expandModal () {
+      PinInfoSheet.current?.snapToIndex(1);
+    }
+  
+    function selectRepeatDays(day){
+      let dayindex = weekName.indexOf(day)
+      const newdayselect = dayofWeek.map((d,i)=> {
+        if (i == dayindex){
+          return !d
+        }
+        else{
+          return d
+        }
+      })
+      setDayOfWeek(newdayselect)
+    }
 
 
   const showLocations = () => {
@@ -252,7 +388,10 @@ useEffect(() => {
               handlePinModalRef(item?.id)
             }}
             description = {item.description}
-          />
+            tracksViewChanges={false}
+            >
+              <Image style={{ height: 50, width:40 }} source={require("../../assets/mapfeature/BeePin.png")}/>
+            </Marker>
         )
       })
     }
@@ -287,6 +426,9 @@ useEffect(() => {
 
   function deletePin(){
     if ((lastAddedPinIndex !== null) && (sendButton == false)) {
+      setIsPinConditionMet(false)
+      setStartDate(initialDate)
+      setEndDate(initialDate)
       setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
@@ -328,6 +470,23 @@ useEffect(() => {
     })();
   }, []);
 
+  function splitAfterNCharacters(str, n) {
+    const regex = new RegExp(`.{1,${n}}`, 'g');
+    return str.match(regex);
+  }
+
+  useEffect(() => {
+    const startTime = String(startDate).split(" ")[4]
+    const endTime = String(endDate).split(" ")[4]
+      console.log("Here",startTime !== "00:00:00" || endTime!== "00:00:00")
+    if (((description !== '') && (dealInformation !== '')) && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay !== true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
+      setIsPinConditionMet(true)
+    }
+    else{
+      setIsPinConditionMet(false)
+    }
+  }, [description, dealInformation, startDate, endDate, checkAllDay]);
+
   let text = "Waiting...";
   text = JSON.stringify(location);
 
@@ -343,12 +502,79 @@ useEffect(() => {
         showsMyLocationButton={true}
         onLongPress={handleMapPress}
       >
+        {/* <View height={250} position={"relative"} width={250} backgroundColor={"red"} justifyContent={"center"} alignItems={"center"} display={true?"flex":"none"}>
+          <Animated.Image source={require("../../assets/mapfeature/BeeInBasket.png")} style ={[animationStyle]}>
+
+          </Animated.Image>
+          <Pressable position={"absolute"} height={50} width={"50%"} backgroundColor={"purple"} marginTop={15} onPress={() => {setBadge(false)}}>
+
+          </Pressable>
+        </View> */}
         {showLocations()}
       </MapView>
+
+
       <BottomSheetModal
         ref={PinInfoSheet}
         index={0}
-        snapPoints={snapPoints}
+        snapPoints={["61%"]}
+        onDismiss={deletePin}
+      >
+        <View>
+          <View flexDirection={"row"} alignItems= {'center'}>
+            <Text style={styles.headerPinSheet}> Hive Pin</Text>
+            <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
+          </View>
+          <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
+          <View flexDirection={"row"}>
+            <Text style={styles.information}>Organization Name</Text>
+            <Text style={{color: "red"}}>*</Text>
+          </View>
+          
+          <TextInput 
+          style={styles.input} 
+          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
+          value ={pinDescription}
+          />
+          <View flexDirection={"row"}>
+          <Text style={styles.information}>Description</Text>
+          </View>
+          <TextInput 
+          style={styles.input}
+          onChangeText={(organization)=> setOrganization(organization)}
+          value ={organization}
+          />
+          {infoDataMakePin.map((item, index) => (
+          <TouchableOpacity
+          key={index}
+          style={styles.moreInfoContainer}
+          onPress={item.onPress}
+          disabled={item.disabled}
+          >
+          <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
+            <View flexDirection={"column"}>
+              <Text style={styles.moreInfoTitle}>{item.title}</Text>
+              <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+            </View>
+            <Icon name="arrow-forward-ios" size={15} />
+          </View>
+        </TouchableOpacity>
+          ))}
+          <Button
+          onPress = {()=>sendToDatabase()} 
+           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
+           style={styles.postPin}>
+            <Text style={styles.sendButton}>Send</Text>
+            <Icon color={"white"} name="send" size={"15"}/>
+          </Button>
+        </View>
+      </BottomSheetModal>
+
+
+      <BottomSheetModal
+        ref={DealInfoSheet}
+        index={0}
+        snapPoints={["50%", "79%"]}
         onDismiss={deletePin}
       >
         <View>
@@ -357,17 +583,24 @@ useEffect(() => {
             <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
           </View>
           <Text style={styles.subheadingPinSheet}>Enter additional details about your resource pin below.</Text>
-          <Text style={styles.information}>Deal Information</Text>
+          <View flexDirection={"row"}>
+            <Text style={styles.information}>Deal Information</Text>
+            <Text style={{color: "red"}}>*</Text>
+          </View>
+          
           <TextInput 
           style={styles.input} 
-          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
-          value ={pinDescription}
+          onChangeText={(dealInformation)=> setPinDescription(dealInformation)}
+          value ={dealInformation}
           />
+          <View flexDirection={"row"}>
           <Text style={styles.information}>Organization Name</Text>
+          <Text style={{color: "red"}}>*</Text>
+          </View>
           <TextInput 
           style={styles.input}
-          onChangeText={(organization)=> setOrganization(organization)}
-          value ={organization}
+          onChangeText={(description)=> setOrganization(description)}
+          value ={description}
           />
 
           <TouchableOpacity onPress={handleUserClick}>
@@ -385,11 +618,12 @@ useEffect(() => {
             </View>
           </View>
           </TouchableOpacity>
-          {infoData.map((item, index) => (
+          {infoDataAddDeal.map((item, index) => (
           <TouchableOpacity
           key={index}
           style={styles.moreInfoContainer}
           onPress={item.onPress}
+          disabled={item.disabled}
           >
           <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
             <View flexDirection={"column"}>
@@ -401,7 +635,8 @@ useEffect(() => {
         </TouchableOpacity>
           ))}
           <Button
-          onPress = {sendToDatabase} 
+          disabled={!isPinConditionMet}
+          onPress = {()=>sendToDatabase()} 
            buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
            style={styles.postPin}>
             <Text style={styles.sendButton}>Send</Text>
@@ -409,32 +644,57 @@ useEffect(() => {
           </Button>
         </View>
       </BottomSheetModal>
+
+
+
       <BottomSheetModal
       ref={TimeInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["45%"]}
       >
-        <Text style={styles.InfoHeader} marginBottom={15}> Time </Text>
+        <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
+          <Text style={styles.InfoHeader} marginBottom={15}> Time </Text>
+          <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+        </View>
+        
         <View style={styles.moreInfoContainer}>
             <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>Start</Text>
                 <Text style={styles.moreInfoSub}>What time does this deal begin?</Text>
               </View>
-               <CheckBox 
-               checked={checkAllDay}
-              onPress={() => setCheckAllDay(!checkAllDay)}/>
+        <DateTimePicker
+          testID="dateTimePicker"
+          value={startDate}
+          mode={mode}
+          is24Hour={true}
+          textColor="red"
+          onChange={(event, date) => onChange(event, date, 'start')}
+        />
             </View>
          </View>
          <View color={'none'} padding={15}>
             <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>End</Text>
-                <Text style={styles.moreInfoSub}>What time does this deal End?</Text>
+                <Text style={styles.moreInfoSub}>What time does this deal end?</Text>
               </View>
-               <CheckBox 
-               checked={checkAllDay}
-              onPress={() => setCheckAllDay(!checkAllDay)}/>
+              <DateTimePicker
+          testID="dateTimePicker"
+          value={endDate}
+          mode={mode}
+          is24Hour={true}
+          onChange={(event, date) => onChange(event, date, 'end')}
+        />
             </View>
          </View>
          <Button
@@ -446,23 +706,34 @@ useEffect(() => {
       <BottomSheetModal
       ref={RepeatInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["45%"]}
       >
+      <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
         <Text style={styles.InfoHeader} marginBottom={15}> Repeat </Text>
+        <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+
+      </View>
         <View style={styles.moreInfoContainer}>
               <View flexDirection={"column"}>
                 <Text style={styles.moreInfoTitle}>Repeat on</Text>
                 <Text style={styles.moreInfoSub}>Select the day this deal repeats on.</Text>
               </View>
         </View>
-        <View flexDirection={"row"} height={80} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
+        <View flexDirection={"row"} height={50} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
           {weekName.map((week) => {
             return(
             <Pressable onPress={()=>{selectRepeatDays(week)}} height={40} width={40} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"} borderRadius={20}>
-              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
-    fontWeight: "500",
-    textAlign: 'center',
-    paddingVertical: 12,}} >{week}</Text>
+              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",fontWeight: "600",textAlign: 'center',paddingVertical: 12,}}
+              >{week}</Text>
             </Pressable>
             )
           })}
@@ -476,9 +747,207 @@ useEffect(() => {
       <BottomSheetModal
       ref={TypeInfoSheet}
       index={0}
-      snapPoints={snapPoints}
+      snapPoints={["64%"]}
       >
-        <Text style ={styles.InfoHeader}>Type</Text>
+        <View>
+          <View style={{position: "relative"}} flexDirection={"row"} alignItems={"center"} justifyContent={'center'}>
+              <Text style ={styles.InfoHeader}>Type</Text>
+              <TouchableOpacity style={{    
+            width: "100",
+            height: "100",
+            borderRadius: "50",
+            padding: 5,
+            backgroundColor: "#EDEEEF",
+            position: "absolute",
+            right: 15,
+            top: 10,
+            }} onPress={CloseTime}><Icon name="close" size="20"></Icon></TouchableOpacity>
+          </View>
+                  <Text style={{textAlign:'center', color: "#646567", size: 10}} >Select the type of resource</Text>
+          <FlatList
+          data={resourceTypes}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.type}
+          numColumns={3}
+          scrollEnabled={false}
+          contentContainerStyle={styles.gridContainer}
+        />
+        <Button
+           buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
+           style={styles.postPin}>
+            <Text style={styles.sendButton}>Save</Text>
+          </Button>
+        </View>
+
+      </BottomSheetModal>
+      <BottomSheetModal
+        ref={PinModalRef}
+        index={0}
+        snapPoints={snapPoints}
+      >
+        <View style = {{marginTop:5, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:15}}>
+            <View style = {styles.imageContainer}>
+              <Image style = {styles.mainStories} src="https://wallpapercave.com/wp/JTpVKUS.jpg" ></Image>
+            </View>
+            <View style = {{
+              display:"flex",
+            }}>
+              
+              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{pinInfoModal?.title}</Text>
+              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:0}}>
+                <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
+                <Text style = {{fontSize:11, color:"#646567"}}> • 6.9 miles • </Text>
+                <Text style = {{fontSize:11, color:"#EF5002"}}>Reoccurring</Text>
+              </View>
+              <View style={{
+                display:"flex",
+                flexDirection:"row",
+                gap:4,
+                alignItems:"center"
+              }}>
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="star" size={16} color="#0894FA" />
+                <AntDesign name="staro" size={16} color="#0894FA" />
+                <Text style = {{fontSize:12, color:"#646567"}}>2034 Shares</Text>
+              </View>
+              
+            </View>
+          </View>
+          <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}  style = {styles.categoryScrollView}>
+            <View style = {styles.categoryContainer}>
+              <Button buttonStyle = {styles.someButtonStyles}
+                title = "Bookmarks"
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                >
+              🎉 Big Groups</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🍾 Special Occasions</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🏠 Family Friends</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🍽 Restaurants</Button>
+              </View>
+          </ScrollView>
+
+          
+          <View style = {styles.shareContainer}>
+              <View style = {{flex:1}}>
+                <Button
+                
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="add" size={18} color="black" /> Add New</Button>
+              </View>
+              <View style = {{flex:1}}>
+                <Button
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="map" size={18} color="black" /> 17 Min</Button>
+              </View>
+              <View style = {{flex:1}}>
+                <Button
+                
+                buttonStyle = {styles.actionButtonsBlue}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="share" size={18} color="white" /></Button>
+              </View>
+            </View>
+          </View>
+
+          <ScrollView > 
+            <View style={styles.dealsContainer}>
+              {deals.map((deal) => (
+                <Pressable key={deal.id} onPress={DealInfo} style={styles.dealContainer}>
+                  <Image style={styles.dealsImage} source={deal.image} />
+                  <View style={styles.dealTextContainer}>
+                    <Text style={{ fontWeight: '400', fontSize: 16 }}>{deal.title}</Text>
+                    <Text style={{ marginTop: 4, fontSize: 13, color: "#646567" }}>{deal.description}</Text>
+                  </View>
+                  <Button
+                    style={styles.buttonsInside}
+                    buttonStyle={{
+                      backgroundColor: 'transparent',
+                      borderRadius: 30,
+                    }}
+                  >
+                    <Icon name="chevron-right" color="black" />
+                  </Button>
+                </Pressable>
+              ))}
+              
+            </View>
+            <View style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontFamily: "Merriweather-Regular", fontSize: 13, color: "#9B9B9B" }}>View More</Text>
+            </View>
+          </ScrollView>
+              
+
+            <BottomSheetModal
+            ref={DealInfoSheet}
+            index={0}
+            snapPoints={snapPoints}
+            >
+              
+            </BottomSheetModal>
+          {/* <View style = {styles.pinInformationContainers}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{pinInfoModal?.title}</Text>
+            <Text>{pinInfoModal?.description}</Text>
+          </View>
+           */}
+          {/* <View style = {styles.pinInformationContainers}>
+            <View style = {styles.infoTimeSection}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Time</Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:10, alignItems:"center"}}>
+                <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                  <Text style = {{color:"#0CADEF", fontSize:12}}>11:00 AM</Text>
+                </View>
+                <Text style = {{color:"#0CADEF", fontWeight:"bold"}}>-</Text>
+                <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                  <Text style = {{color:"#0CADEF", fontSize:12}}>01:00 PM</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style = {{marginTop:20,}}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Repeat</Text>
+              <View flexDirection={"row"}  width={"100%"} justifyContent={"space-between"}  >
+                {weekName.map((week) => {
+                return(
+                <Pressable onPress={()=>{selectRepeatDays(week)}} style = {{height:35, width:35, borderRadius:100, display:"flex", justifyContent:"center", alignItems:"center"}} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"}>
+                  <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
+                    fontWeight: "500",
+                  }} >{week}</Text>
+                </Pressable>
+                )
+                })}
+              </View>
+            </View>
+
+            <View style = {{marginTop:20,}}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Community Filters</Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:10}}>
+                <Image style = {{borderRadius:100, height:35, width:35}} src="https://wallpapercave.com/wp/JTpVKUS.jpg"></Image>
+                <Image style = {{borderRadius:100, height:35, width:35}} src="https://letsenhance.io/static/8f5e523ee6b2479e26ecc91b9c25261e/1015f/MainAfter.jpg"></Image>
+              </View>
+            </View>
+
+          </View> */}
       </BottomSheetModal>
       <BottomSheetModal
         ref={PinModalRef}
@@ -933,6 +1402,9 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   map: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     width: Dimensions.get("window").width,
     height: Dimensions.get("window").height,
   },
@@ -1232,5 +1704,18 @@ const styles = StyleSheet.create({
     borderBottomWidth:1,
     borderBottomColor:"transparent",
     alignItems:"center"
-  }
+  },
+  pressable: {
+    height: 100,
+    width: 100,
+    borderRadius: 50,
+    backgroundColor: 'red',
+    justifyContent:'center',
+    alignItems:'center',
+    margin: 10,
+  },
+  gridContainer: {
+    justifyContent: 'space-between',
+    padding: 10,
+  },
 });
