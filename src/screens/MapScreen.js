@@ -11,6 +11,12 @@ const loadFonts = () => {
   'Merriweather-Regular': require('../../assets/fonts/Merriweather-Regular.ttf'),
   });
 };
+const deals = [
+  { id: 1, title: 'Free Produce Daily', description: 'Community Fridge', image: require('../../assets/images/dealsImage.png') },
+  { id: 2, title: 'Seeds of Hope', description: 'Community Garden', image: require('../../assets/images/dealsImage.png') },
+  { id: 3, title: 'Vons', description: 'Grocery', image: require('../../assets/images/dealsImage.png') },
+  { id: 4, title: 'David\'s Truck', description: 'Grocery', image: require('../../assets/images/dealsImage.png') },
+];
 
 import {
   StyleSheet,
@@ -51,6 +57,8 @@ export default function MapScreen({ navigation }) {
   const TimeInfoSheet = useRef(null);
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
+  const DealInfoSheet = useRef(null)
+
 
   const PinModalRef = useRef(null);
 
@@ -180,6 +188,9 @@ useEffect(() => {
   }
   function TypeInfo(){
     TypeInfoSheet.current?.present();
+  }
+  function DealInfo(){
+    DealInfoSheet.current?.present();
   }
 
   function getPinWithId(id) {
@@ -474,7 +485,7 @@ useEffect(() => {
         index={0}
         snapPoints={snapPoints}
       >
-        <View style = {{marginTop:0, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:20}}>
+        <View style = {{marginTop:5, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:15}}>
             <View style = {styles.imageContainer}>
               <Image style = {styles.mainStories} src="https://wallpapercave.com/wp/JTpVKUS.jpg" ></Image>
             </View>
@@ -483,7 +494,12 @@ useEffect(() => {
             }}>
               
               <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{pinInfoModal?.title}</Text>
-              <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:12}}>23 Deals Claimed</Text>
+              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:0}}>
+                <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
+                <Text style = {{fontSize:11, color:"#646567"}}> • 6.9 miles • </Text>
+                <Text style = {{fontSize:11, color:"#EF5002"}}>Reoccurring</Text>
+              </View>
               <View style={{
                 display:"flex",
                 flexDirection:"row",
@@ -500,70 +516,138 @@ useEffect(() => {
               
             </View>
           </View>
-          <View style = {{
-            backgroundColor:"white",
-            marginRight:20,
-            marginLeft:20,
-            marginTop:20,
-            borderRadius:10,
-            paddingLeft:15,
-            paddingRight:15,
-            paddingTop:20,
-            paddingBottom:20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-          }}>
-            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{pinInfoModal?.title}</Text>
-            <Text>{pinInfoModal?.description}</Text>
-          </View>
-          
-          <View style = {{
-            backgroundColor:"white",
-            marginRight:20,
-            marginLeft:20,
-            marginTop:20,
-            borderRadius:10,
-            paddingLeft:15,
-            paddingRight:15,
-            paddingTop:20,
-            paddingBottom:20,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.1,
-            shadowRadius: 3,
-          }}>
-          <View style = {styles.infoTimeSection}>
-            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>Time</Text>
-            <View style = {{display:"flex", flexDirection:"row", gap:10, alignItems:"center"}}>
-              <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
-                <Text style = {{color:"#0CADEF", fontSize:13}}>11:00 AM</Text>
+          <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}  style = {styles.categoryScrollView}>
+            <View style = {styles.categoryContainer}>
+              <Button buttonStyle = {styles.someButtonStyles}
+                title = "Bookmarks"
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                >
+              🎉 Big Groups</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🍾 Special Occasions</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🏠 Family Friends</Button>
+              <Button
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                buttonStyle = {styles.someButtonStyles}
+                >
+              🍽 Restaurants</Button>
               </View>
-              <Text style = {{color:"#0CADEF", fontWeight:"bold"}}>-</Text>
-              <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
-                <Text style = {{color:"#0CADEF", fontSize:13}}>01:00 PM</Text>
+          </ScrollView>
+
+          
+          <View style = {styles.shareContainer}>
+              <View style = {{flex:1}}>
+                <Button
+                
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="add" size={18} color="black" /> Add New</Button>
+              </View>
+              <View style = {{flex:1}}>
+                <Button
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="map" size={18} color="black" /> 17 Min</Button>
+              </View>
+              <View style = {{flex:1}}>
+                <Button
+                
+                buttonStyle = {styles.actionButtonsBlue}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="share" size={18} color="white" /></Button>
               </View>
             </View>
           </View>
 
-          <View style = {{marginTop:20,}}>
-            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>Repeat</Text>
-            <View flexDirection={"row"} height={80} width={"100%"} justifyContent={"space-between"} padding={10} marginTop={20}>
-          {weekName.map((week) => {
-            return(
-            <Pressable onPress={()=>{selectRepeatDays(week)}} height={40} width={40} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"} borderRadius={20}>
-              <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
-    fontWeight: "500",
-    textAlign: 'center',
-    paddingVertical: 12,}} >{week}</Text>
-            </Pressable>
-            )
-          })}
-        </View>
-          </View>
+          <ScrollView > 
+            <View style={styles.dealsContainer}>
+              {deals.map((deal) => (
+                <Pressable key={deal.id} onPress={DealInfo} style={styles.dealContainer}>
+                  <Image style={styles.dealsImage} source={deal.image} />
+                  <View style={styles.dealTextContainer}>
+                    <Text style={{ fontWeight: '400', fontSize: 16 }}>{deal.title}</Text>
+                    <Text style={{ marginTop: 4, fontSize: 13, color: "#646567" }}>{deal.description}</Text>
+                  </View>
+                  <Button
+                    style={styles.buttonsInside}
+                    buttonStyle={{
+                      backgroundColor: 'transparent',
+                      borderRadius: 30,
+                    }}
+                  >
+                    <Icon name="chevron-right" color="black" />
+                  </Button>
+                </Pressable>
+              ))}
+              
+            </View>
+            <View style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontFamily: "Merriweather-Regular", fontSize: 13, color: "#9B9B9B" }}>View More</Text>
+            </View>
+          </ScrollView>
+              
 
+            <BottomSheetModal
+            ref={DealInfoSheet}
+            index={0}
+            snapPoints={snapPoints}
+            >
+              
+            </BottomSheetModal>
+          {/* <View style = {styles.pinInformationContainers}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{pinInfoModal?.title}</Text>
+            <Text>{pinInfoModal?.description}</Text>
           </View>
+           */}
+          {/* <View style = {styles.pinInformationContainers}>
+            <View style = {styles.infoTimeSection}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Time</Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:10, alignItems:"center"}}>
+                <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                  <Text style = {{color:"#0CADEF", fontSize:12}}>11:00 AM</Text>
+                </View>
+                <Text style = {{color:"#0CADEF", fontWeight:"bold"}}>-</Text>
+                <View style = {{backgroundColor:"#EDEEEF", paddingTop:5, paddingBottom:5, paddingRight:15, paddingLeft:15, borderRadius:5}}>
+                  <Text style = {{color:"#0CADEF", fontSize:12}}>01:00 PM</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style = {{marginTop:20,}}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Repeat</Text>
+              <View flexDirection={"row"}  width={"100%"} justifyContent={"space-between"}  >
+                {weekName.map((week) => {
+                return(
+                <Pressable onPress={()=>{selectRepeatDays(week)}} style = {{height:35, width:35, borderRadius:100, display:"flex", justifyContent:"center", alignItems:"center"}} backgroundColor={dayofWeek[weekName.indexOf(week)]?"#0FADFF":"#EDEEEF"}>
+                  <Text style={{color:dayofWeek[weekName.indexOf(week)]?"white":"#0FADFF",
+                    fontWeight: "500",
+                  }} >{week}</Text>
+                </Pressable>
+                )
+                })}
+              </View>
+            </View>
+
+            <View style = {{marginTop:20,}}>
+              <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Community Filters</Text>
+              <View style = {{display:"flex", flexDirection:"row", gap:10}}>
+                <Image style = {{borderRadius:100, height:35, width:35}} src="https://wallpapercave.com/wp/JTpVKUS.jpg"></Image>
+                <Image style = {{borderRadius:100, height:35, width:35}} src="https://letsenhance.io/static/8f5e523ee6b2479e26ecc91b9c25261e/1015f/MainAfter.jpg"></Image>
+              </View>
+            </View>
+
+          </View> */}
       </BottomSheetModal>
       <View style={[styles.mapFooter, expanded ? styles.expanded : null]}> 
         <View style={styles.locationContainer}>
@@ -583,7 +667,6 @@ useEffect(() => {
             <View style = {styles.modalContainer}>
     
               <View  style = {styles.closeButton} type="solid" buttonStyle={{                
-                backgroundColor:"red",             
               }}>
                 <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
                
@@ -615,121 +698,56 @@ useEffect(() => {
                   
                 </View>
               </View> 
-
               <View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}  style = {styles.categoryScrollView}>
-                <View style = {styles.categoryContainer}>
-                  <Button
-                    title = "Bookmarks"
-                    titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
-                    buttonStyle={{
-                      borderWidth:1,
-                      paddingTop:3,
-                      paddingBottom:3,
-                      paddingLeft:8,
-                      paddingRight:8,
-                      borderColor:"#E2E3E5",
-                      backgroundColor: 'white',
-                      borderRadius: 30,
-                    }}
-                    >
-                  🎉 Big Groups</Button>
-                  <Button
-                    titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
-                    buttonStyle={{
-                      borderWidth:1,
-                      paddingTop:3,
-                      paddingBottom:3,
-                      paddingLeft:8,
-                      paddingRight:8,
-                      borderColor:"#E2E3E5",
-                      backgroundColor: 'white',
-                      borderRadius: 30,
-                    }}
-                    >
-                  🍾 Special Occasions</Button>
-                  <Button
-                    titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
-                    backgroundStyle= {{backgroundColor:"red"}}
-                    buttonStyle={{
-                      borderWidth:1,
-                      paddingTop:3,
-                      paddingBottom:3,
-                      paddingLeft:8,
-                      paddingRight:8,
-                      borderColor:"#E2E3E5",
-                      backgroundColor: 'white',
-                      borderRadius: 30,
-                    }}
-                    >
-                  🏠 Family Friends</Button>
-                  <Button
-                    titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
-                    backgroundStyle= {{backgroundColor:"red"}}
-                    buttonStyle={{
-                      borderWidth:1,
-                      paddingTop:3,
-                      paddingBottom:3,
-                      paddingLeft:8,
-                      paddingRight:8,
-                      borderColor:"#E2E3E5",
-                      backgroundColor: 'white',
-                      borderRadius: 30,
-                    }}
-                    >
-                  🍽 Restaurants</Button>
-                  </View>
-                  </ScrollView>
-                  
-              </View>
-
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}  style = {styles.categoryScrollView}>
+              <View style = {styles.categoryContainer}>
+                <Button buttonStyle = {styles.someButtonStyles}
+                  title = "Bookmarks"
+                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  >
+                🎉 Big Groups</Button>
+                <Button
+                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  buttonStyle = {styles.someButtonStyles}
+                  >
+                🍾 Special Occasions</Button>
+                <Button
+                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  buttonStyle = {styles.someButtonStyles}
+                  >
+                🏠 Family Friends</Button>
+                <Button
+                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  buttonStyle = {styles.someButtonStyles}
+                  >
+                🍽 Restaurants</Button>
+                </View>
+            </ScrollView>
+            </View>
               <View style = {styles.shareContainer}>
-                <View style = {{flex:1}}>
-                  <Button
-                      titleStyle={{ fontWeight: "500", color:"black", fontSize: 12 }}
-                      backgroundStyle= {{backgroundColor:"red"}}
-                      buttonStyle={{
-                        paddingTop:8,
-                        paddingBottom:8,
-                        backgroundColor: "#EDEEEF",
-                        borderRadius: 30,
-                      }}
-                      >
-                    <FontAwesome6 name="heart" size={20} color="black" /> 71</Button>
-                  </View>
-
-                  <View style = {{flex:1}}>
-                    <Button
-                      titleStyle={{ fontWeight: "500", color:"black", fontSize: 12}}
-                      backgroundStyle= {{backgroundColor:"red"}}
-                      buttonStyle={{
-                        paddingTop:8,
-                        paddingBottom:8,
-                        backgroundColor: "#EDEEEF",
-                        borderRadius: 30,
-                      }}
-                      >
-                    <MaterialIcons name="filter-list" size={20} color="black" /> Filter</Button>
-                  </View>
-                  <View style = {{flex:1}}>
-                    <Button
-                    titleStyle={{ fontWeight: "500", color:"black", fontSize: 12}}
-                    buttonStyle={{
-                      paddingTop:8,
-                      paddingBottom:8,
-                      backgroundColor: "#0CADFF",
-                      borderRadius: 30,
-                    }}
-                    >
-                  <FontAwesome6 name="share" size={20} color="white" />
-                  </Button>
-                  </View>
-
+              <View style = {{flex:1}}>
+                <Button
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="add" size={18} color="black" /> Add New</Button>
               </View>
-
-
-
-
+              <View style = {{flex:1}}>
+                <Button
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="map" size={18} color="black" /> 17 Min</Button>
+              </View>
+              <View style = {{flex:1}}>
+                <Button
+                buttonStyle = {styles.actionButtons}
+                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                >
+                  <FontAwesome6 name="heart" size={18} color="black" /> 71</Button>
+              </View>
+            </View>
+          
               <ScrollView > 
                 <View style = {styles.dealsContainer}>
                   <View style = {{display:"flex",
@@ -1086,6 +1104,13 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     backgroundColor: 'white', 
   },
+  dealsImage:{
+    width: 40,
+    objectFit:"contain",
+    height: 40,
+    borderColor: 'white',
+    backgroundColor: 'white',
+  },
   mainStories:{
     width: 65,
     height: 65,
@@ -1133,5 +1158,79 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: 'center',
     paddingVertical: 12,
+  },
+  pinInformationContainers:{
+    backgroundColor:"white",
+    marginRight:20,
+    marginLeft:20,
+    marginTop:20,
+    borderRadius:15,
+    paddingLeft:15,
+    paddingRight:15,
+    paddingTop:20,
+    paddingBottom:20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  someButtonStyles:{
+    borderWidth:1,
+    paddingTop:3,
+    paddingBottom:3,
+    paddingLeft:8,
+    paddingRight:8,
+    borderColor:"#E2E3E5",
+    backgroundColor: 'white',
+    borderRadius: 30,
+  },
+  actionButtons:{
+    paddingTop:8,
+    paddingBottom:8,
+    display:"flex",
+    flexDirection:"row",
+    alignItems:"center",
+
+    backgroundColor: "#EDEEEF",
+    borderRadius: 30,
+  },
+  actionButtonsBlue:{
+    paddingTop:8,
+    paddingBottom:8,
+    display:"flex",
+    flexDirection:"row",
+    alignItems:"center",
+
+    backgroundColor: "#0CADFF",
+    borderRadius: 30,
+  
+  },
+  bottomDealContainer:{
+    display:"flex",
+    flexDirection:"row",
+    borderBottomRightRadius:10,
+    borderBottomLeftRadius:10,
+    paddingLeft:10,
+    backgroundColor:"white",
+    paddingRight:10,
+    paddingTop:10,
+    paddingBottom:10,
+    borderBottomWidth:1,
+    borderBottomColor:"transparent",
+    alignItems:"center"
+  },
+  topDealContainer:{
+    display:"flex",
+    flexDirection:"row",
+    borderTopRightRadius:10,
+    borderTopLeftRadius:10,
+    paddingLeft:10,
+    backgroundColor:"white",
+    paddingRight:10,
+    paddingTop:10,
+    paddingBottom:10,
+    borderBottomWidth:1,
+    borderBottomColor:"transparent",
+    alignItems:"center"
   }
 });
