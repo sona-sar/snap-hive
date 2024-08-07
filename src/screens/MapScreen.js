@@ -4,6 +4,13 @@ import MapView, { Marker } from "react-native-maps";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+
+const loadFonts = () => {
+  return Font.loadAsync({
+  'Merriweather-Regular': require('../../assets/fonts/Merriweather-Regular.ttf'),
+  });
+};
 
 import {
   StyleSheet,
@@ -25,11 +32,42 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { supabase } from "../utils/hooks/supabase";
 
 export default function MapScreen({ navigation }) {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadAsyncFonts = async () => {
+      await loadFonts();
+      setFontsLoaded(true);
+    };
+    loadAsyncFonts();
+  }, []);
+
+  const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
+  const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
+  const [sendButton, setSendButton] = useState(false);
+  const [showPins, setShowPins] = useState(false); 
+  const [pinInfoModal, setPinInfoModal] = useState({});
+  const PinInfoSheet = useRef(null);
+  const TimeInfoSheet = useRef(null);
+  const RepeatInfoSheet = useRef(null);
+  const TypeInfoSheet = useRef(null);
+
+  const PinModalRef = useRef(null);
+
+  const [expanded, setExpanded] = useState(false);
+  const [checkAllDay, setCheckAllDay] = useState(true);
+  const [pinDescription, setPinDescription] = useState('');
+  const [organization, setOrganization] = useState('');
+  const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
+  const [clickedUsers, setClickedUsers] = useState({}); // State to track clicked users
+
   const bottomSheetRef = useRef(null);
-  const snapPoints = ["50%", "90%"];
+  const snapPoints = ["74%", "90%"];
   function handlePresentModal() {
     bottomSheetRef?.current?.present();
   }
+
+
   const [currentPin, setCurrentPin] = useState({
     title:"",
     location:{},
@@ -76,20 +114,7 @@ export default function MapScreen({ navigation }) {
     onPress: TypeInfo,
   },
 ];
-  const weekName = ["M", "T", "W", "Th", "F", "S", "Su"]
-  const [dayofWeek, setDayOfWeek] = useState([0,0,0,0,0,0,0])
-  const [sendButton, setSendButton] = useState(false);
-  const [showPins, setShowPins] = useState(false); 
-  const PinInfoSheet = useRef(null);
-  const TimeInfoSheet = useRef(null);
-  const RepeatInfoSheet = useRef(null);
-  const TypeInfoSheet = useRef(null);
-  const [expanded, setExpanded] = useState(false);
-  const [checkAllDay, setCheckAllDay] = useState(true);
-  const [pinDescription, setPinDescription] = useState('');
-  const [organization, setOrganization] = useState('');
-  const [lastAddedPinIndex, setLastAddedPinIndex] = useState(null);
-  const [clickedUsers, setClickedUsers] = useState({}); // State to track clicked users
+
 
 
   const insertData = async (currentPin) => {
@@ -115,6 +140,24 @@ export default function MapScreen({ navigation }) {
         console.error("Unexpected error:", error);
     }
   }
+
+  const fetchData = async () => {
+    try {
+        const { data, error } = await supabase.from('pins').select('*');
+        if (error) {
+            console.error("Error fetching data:", error);
+        } else {
+            setPins(data)
+            console.log("logggggging")
+        }
+    } catch (error) {
+        console.error("Unexpected error:", error);
+    }
+};
+useEffect(() => {
+  fetchData();
+}, []);
+
   const handleUserClick = () => {
     setCheckAllDay(!checkAllDay)
     console.log(checkAllDay)
@@ -125,43 +168,64 @@ export default function MapScreen({ navigation }) {
   };
 
 
-    function createPinInfo() {
-      PinInfoSheet.current?.present();
-      setSendButton(false)
-    }
-    function TimeInfo() {
-      TimeInfoSheet.current?.present();
-    }
-    function RepeatInfo(){
-      RepeatInfoSheet.current?.present();
-    }
-    function TypeInfo(){
-      TypeInfoSheet.current?.present();
-    }
-    function sendToDatabase(){
-      setPinDescription('')
-      setOrganization('')
-      setDayOfWeek([0,0,0,0,0,0,0])
-      setSendButton(true)
-      setCheckAllDay(false)
-      PinInfoSheet.current?.close();
-      insertData(currentPin)
-      // console.log("sent")
-      //push downn the modal
-    }
-    function selectRepeatDays(day){
-      let dayindex = weekName.indexOf(day)
-      const newdayselect = dayofWeek.map((d,i)=> {
-        if (i == dayindex){
-          return !d
-        }
-        else{
-          return d
-        }
-      })
-      setDayOfWeek(newdayselect)
-    }
+  function createPinInfo() {
+    PinInfoSheet.current?.present();
+    setSendButton(false)
+  }
+  function TimeInfo() {
+    TimeInfoSheet.current?.present();
+  }
+  function RepeatInfo(){
+    RepeatInfoSheet.current?.present();
+  }
+  function TypeInfo(){
+    TypeInfoSheet.current?.present();
+  }
 
+  function getPinWithId(id) {
+    let temp = null;
+    pins.map((pin) => {
+      if(pin.id == id) {
+        temp = pin;
+      }
+    })
+    return temp;
+  }
+
+  function handlePinModalRef(id) {
+    if(id) {
+      let tempPin = getPinWithId(id);
+      setPinInfoModal(tempPin);
+    }
+    PinModalRef?.current?.present();
+  }
+
+
+  function sendToDatabase(){
+    insertData(currentPin)
+    setPinDescription('')
+    setOrganization('')
+    setDayOfWeek([0,0,0,0,0,0,0])
+    setSendButton(true)
+    setCheckAllDay(false)
+    PinInfoSheet.current?.close();
+  }
+  function expandModal () {
+    PinInfoSheet.current?.snapToIndex(1);
+  }
+
+  function selectRepeatDays(day){
+    let dayindex = weekName.indexOf(day)
+    const newdayselect = dayofWeek.map((d,i)=> {
+      if (i == dayindex){
+        return !d
+      }
+      else{
+        return d
+      }
+    })
+    setDayOfWeek(newdayselect)
+  }
 
 
   const showLocations = () => {
@@ -173,20 +237,18 @@ export default function MapScreen({ navigation }) {
             key = {index}
             coordinate = {item.location}
             title = {item.title}
+            onPress={() => {
+              handlePinModalRef(item?.id)
+            }}
             description = {item.description}
           />
         )
       })
     }
-
     return null
-    
   }
 
-  // useEffect(() => {
-  //   console.log(currentPin);
-    
-  // }, [currentPin]);
+  
 
   const handleMapPress = (e) => {
     if(showPins){
@@ -197,8 +259,7 @@ export default function MapScreen({ navigation }) {
         type:"food",
         time:24,
       };
-      // console.log(newPin.location)
-      // console.log(e.nativeEvent.coordinate)
+
       setPins([...pins, newPin]);
       setCurrentPin({
         location: newPin.location,
@@ -409,6 +470,14 @@ export default function MapScreen({ navigation }) {
       >
         <Text style ={styles.InfoHeader}>Type</Text>
       </BottomSheetModal>
+      <BottomSheetModal
+        ref={PinModalRef}
+        index={0}
+        snapPoints={snapPoints}
+      >
+          <Text>{pinInfoModal?.title}</Text>
+          <Text>{pinInfoModal?.description}</Text>
+      </BottomSheetModal>
       <View style={[styles.mapFooter, expanded ? styles.expanded : null]}> 
         <View style={styles.locationContainer}>
           <TouchableOpacity
@@ -425,18 +494,14 @@ export default function MapScreen({ navigation }) {
         <View style={[styles.bitmojiContainer]}>
           <BottomSheetModal backgroundStyle={{backgroundColor:"white"}} ref={bottomSheetRef} index={0} snapPoints={snapPoints}>
             <View style = {styles.modalContainer}>
-              <Button onClick={() => {
-                bottomSheetRef?.current?.hide();
-              }} style = {styles.closeButton} type="solid" buttonStyle={{
-                backgroundColor: '#EDEEEF',
-                borderRadius: 3,
-                height:40, width:40,
-                marginRight:20,
-                borderRadius:100,
+    
+              <View  style = {styles.closeButton} type="solid" buttonStyle={{                
+                backgroundColor:"red",             
               }}>
-                <Icon name="close" color="black" size = "20" />
-              </Button>
-              <View style = {{marginTop:-30, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:20}}>
+                <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
+               
+              </View>
+              <View style = {{marginTop:-25, marginLeft:20, display:"flex", flexDirection:"row", alignItems:"center", gap:20}}>
                 <View style = {styles.imageContainer}>
                   <Image style = {styles.mainStories} src="https://wallpapercave.com/wp/JTpVKUS.jpg" ></Image>
                 </View>
@@ -444,7 +509,7 @@ export default function MapScreen({ navigation }) {
                   display:"flex",
                 }}>
                   
-                  <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>Snap Bite</Text>
+                  <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>Plateful</Text>
                   <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:12}}>45 Deals Nearby</Text>
                   <View style={{
                     display:"flex",
@@ -561,14 +626,11 @@ export default function MapScreen({ navigation }) {
                   <View style = {{flex:1}}>
                     <Button
                     titleStyle={{ fontWeight: "500", color:"black", fontSize: 12}}
-                    backgroundStyle= {{backgroundColor:"blue"}}
                     buttonStyle={{
                       paddingTop:8,
                       paddingBottom:8,
                       backgroundColor: "#0CADFF",
-
                       borderRadius: 30,
-                    
                     }}
                     >
                   <FontAwesome6 name="share" size={20} color="white" />
@@ -579,14 +641,27 @@ export default function MapScreen({ navigation }) {
 
 
 
+
               <ScrollView > 
                 <View style = {styles.dealsContainer}>
-                  <View style = {styles.dealContainer}>
-                    <Image style = {styles.dealStories} src="http://www.dumpaday.com/wp-content/uploads/2017/01/random-pictures-109.jpg" ></Image>
+                  <View style = {{display:"flex",
+                    flexDirection:"row",
+                    borderTopRightRadius:10,
+                    borderTopLeftRadius:10,
+                    paddingLeft:10,
+                    backgroundColor:"white",
+                    paddingRight:10,
+                    paddingTop:10,
+                    paddingBottom:10,
+                    borderBottomWidth:1,
+                    borderBottomColor:"transparent",
+                    alignItems:"center",}}>
+                    <Image style = {styles.dealStories} src="https://logonoid.com/images/trader-joes-logo.png" ></Image>
                     <View style = {styles.dealTextContainer}>
-                      <Text style = {{fontWeight:600, fontSize:19}}>Target</Text>
-                      <Text style = {{marginTop:5}}>5 occuring deals</Text>
+                      <Text style = {{fontWeight:400, fontSize:16}}>Trader Joe's</Text>
+                      <Text style = {{marginTop:4, fontSize:13, color:"#646567"}}>Retail</Text>
                     </View>
+                    <Text style = {{fontSize: 13, color:"#0CADFF"}}>15</Text>
                     <Button
                       style = {styles.buttonsInside}
                       buttonStyle={{
@@ -597,11 +672,13 @@ export default function MapScreen({ navigation }) {
                     </Button>
                   </View>               
                   <View style = {styles.dealContainer}>
-                    <Image style = {styles.dealStories} src="https://tse3.mm.bing.net/th?id=OIP.7TgBB5DgbtJoSnCFIS7SJgHaHa&pid=Api&P=0&h=220" ></Image>
+                    <Image style = {styles.dealStories} src="https://www.seedsofhopela.org/uploads/1/1/8/5/118565408/published/sohlogo_4.png?1528757672" ></Image>
                     <View style = {styles.dealTextContainer}>
-                      <Text style = {{fontWeight:600, fontSize:19}}>Walmart</Text>
-                      <Text style = {{marginTop:5}}>20 occuring deals</Text>
+                      <Text style = {{fontWeight:400, fontSize:16}}>Seeds of Hope</Text>
+                      <Text style = {{marginTop:4, fontSize:13, color:"#646567"}}>Community Garden</Text>
                     </View>
+                    <Text style = {{fontSize: 13, color:"#0CADFF"}}>10</Text>
+
                     <Button
                       style = {styles.buttonsInside}
                       buttonStyle={{
@@ -613,11 +690,12 @@ export default function MapScreen({ navigation }) {
                   </View>
 
                   <View style = {styles.dealContainer}>
-                    <Image style = {styles.dealStories} src="https://concepto.de/wp-content/uploads/2022/09/random-aleatorio-imprevisible-e1664563555843.jpg" ></Image>
+                    <Image style = {styles.dealStories} src="https://download.logo.wine/logo/Vons/Vons-Logo.wine.png" ></Image>
                     <View style = {styles.dealTextContainer}>
-                      <Text style = {{fontWeight:600, fontSize:19}}>Food Bank</Text>
-                      <Text style = {{marginTop:5}}>5 occuring deals</Text>
+                      <Text style = {{fontWeight:400, fontSize:16}}>Vons</Text>
+                      <Text style = {{marginTop:4, fontSize:13, color:"#646567"}}>Grocery</Text>
                     </View>
+                    <Text style = {{fontSize: 13, color:"#0CADFF"}}>7</Text>
                     <Button
                       style = {styles.buttonsInside}
                       buttonStyle={{
@@ -627,12 +705,24 @@ export default function MapScreen({ navigation }) {
                       ><Icon name="chevron-right" color="black" />
                     </Button>
                   </View>
-                  <View style = {styles.dealContainer}>
-                    <Image style = {styles.dealStories} src="https://external-preview.redd.it/JfuQsaTmiI7w5bRdgcebjAO3i95B68pqkHpcdQPjEIs.jpg?width=640&crop=smart&auto=webp&s=d6e44852b2ff8e557c79884ba698a2f55208d3cb" ></Image>
+                  <View style = {{display:"flex",
+                    flexDirection:"row",
+                    borderBottomRightRadius:10,
+                    borderBottomLeftRadius:10,
+                    paddingLeft:10,
+                    backgroundColor:"white",
+                    paddingRight:10,
+                    paddingTop:10,
+                    paddingBottom:10,
+                    borderBottomWidth:1,
+                    borderBottomColor:"transparent",
+                    alignItems:"center"}}>
+                    <Image style = {styles.dealStories} src="https://logodix.com/logo/37412.jpg" ></Image>
                     <View style = {styles.dealTextContainer}>
-                      <Text style = {{fontWeight:600, fontSize:19}}>David's Truck</Text>
-                      <Text style = {{marginTop:5}}>3 occuring deals</Text>
+                      <Text style = {{fontWeight:400, fontSize:16}}>David's Truck</Text>
+                      <Text style = {{marginTop:4, fontSize:13, color:"#646567"}}>Grocery</Text>
                     </View>
+                    <Text style = {{fontSize: 13, color:"#0CADFF"}}>13</Text>
                     <Button
                       style = {styles.buttonsInside}
                       buttonStyle={{
@@ -643,7 +733,13 @@ export default function MapScreen({ navigation }) {
                     </Button>
                   </View>
                 </View>
+                <View style = {{marginTop:20, display:"flex", alignItems:"center", justifyContent:"center"}}> 
+                  <Text style = {{fontFamily: "Merriweather-Regular", fontSize:13, color:"#9B9B9B"}}>View More</Text>
+                </View>
               </ScrollView>
+              
+
+
             </View>
           </BottomSheetModal>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style = {styles.buttonScrollview}>
@@ -699,8 +795,15 @@ export default function MapScreen({ navigation }) {
                   }}
                 />
             </View>
+            <View>
+            <Text style = {{backgroundColor:"red"}}>View More</Text>
+
+            </View>
+
           </ScrollView>
+
         </View>
+        
       </View>
     </View>
   </BottomSheetModalProvider>  
@@ -847,18 +950,19 @@ const styles = StyleSheet.create({
   closeButton:{
     display:"flex",
     justifyContent:"center",
-    alignItems:"flex-end"
+    alignItems:"flex-end",
+    marginRight:20,
   },
   dealsContainer:{
     elevation: 5,
     marginTop:20,
-    marginRight:10,
+    marginRight:20,
     gap:1,
-    marginLeft:10,
+    marginLeft:20,
     display:"flex",
     flexDirection:"column",
     // gap:10,
-    backgroundColor: "red",
+    backgroundColor: "#E2E3E5",
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
@@ -871,8 +975,8 @@ const styles = StyleSheet.create({
     paddingLeft:10,
     backgroundColor:"white",
     paddingRight:10,
-    paddingTop:5,
-    paddingBottom:5,
+    paddingTop:10,
+    paddingBottom:10,
     borderBottomWidth:1,
     borderBottomColor:"transparent",
     alignItems:"center",
@@ -887,8 +991,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dealStories: {
-    width: 50,
-    height: 50,
+    width: 45,
+    objectFit:"contain",
+    height: 45,
     borderRadius: 100,
     borderColor: 'white',
     backgroundColor: 'white', 
@@ -903,6 +1008,7 @@ const styles = StyleSheet.create({
   dealTextContainer:{
     marginLeft:12,
     flex:1,
+    
   },
   categoryContainer:{
     display:"flex",
@@ -911,7 +1017,7 @@ const styles = StyleSheet.create({
   
   },
   categoryScrollView:{
-    marginTop:10,
+    marginTop:20,
     marginLeft:20,
   },
   sendButton: {
