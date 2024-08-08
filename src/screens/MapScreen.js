@@ -155,6 +155,9 @@ const infoDataMakePin = [
   const DealInfoSheet = useRef(null);
   const ReadMore = useRef(null)
   const TimeInfoSheet = useRef(null);
+  const [selectedIndices, setSelectedIndices] = useState([]);
+
+
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
   const [expanded, setExpanded] = useState(false);
@@ -239,6 +242,15 @@ const infoDataMakePin = [
         console.error("Unexpected error:", error);
     }
 };
+const handlePress = (index) => {
+  setSelectedIndices((prev) => {
+    if (prev.includes(index)) {
+      return prev.filter((i) => i !== index);
+    } else {
+      return [...prev, index];
+    }
+  });
+};
 useEffect(() => {
   fetchData();
 }, []);
@@ -255,23 +267,28 @@ useEffect(() => {
     });
   };
 
-  const renderItem = ({ item }) => (
-  <View>
-    <Pressable style={{
+  const renderItem = ({ item, index }) => {
+    const isSelected = selectedIndices.includes(index);
+    return(
+        <View>
+    <TouchableOpacity style={{
           height: 100,
           width: 100,
           borderRadius: 50,
-          backgroundColor: `${item.color}`,
+          backgroundColor: `${isSelected ? '#0FADFF' : item.color}`,
           justifyContent:'center',
           alignItems:'center',
           margin: 10,
-    }}>
+    }}
+    onPress={() => handlePress(index)}
+    >
       <Image  style={{height:60, width:60}}source={item.pic} ></Image>
       {/* Add any content or functionality for the Pressable here */}
-    </Pressable>
+    </TouchableOpacity>
     <Text style={{ justifyContent: 'space-between', textAlign:'center'}} >{item.type}</Text>
   </View>
-  );
+    )
+  };
   
 
     function createPinInfo() {
@@ -1320,6 +1337,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     paddingBottom: 5,
     marginLeft:10,
+    marginRight:45,
     paddingTop:5,
     paddingRight:225,
   },
