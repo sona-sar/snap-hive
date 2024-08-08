@@ -3,14 +3,11 @@ import "react-native-gesture-handler";
 import MapView, { Marker } from "react-native-maps";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+// require('dotenv').config();
 
-const loadFonts = () => {
-  return Font.loadAsync({
-  'Merriweather-Regular': require('../../assets/fonts/Merriweather-Regular.ttf'),
-  });
-};
+const googleApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API;
+
 const deals = [
   { id: 1, title: 'Free Produce Daily', description: 'Community Fridge', image: require('../../assets/images/dealsImage.png') },
   { id: 2, title: 'Seeds of Hope', description: 'Community Garden', image: require('../../assets/images/dealsImage.png') },
@@ -49,25 +46,16 @@ import { supabase } from "../utils/hooks/supabase";
 export default function MapScreen({ navigation }) {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  useEffect(() => {
-    const loadAsyncFonts = async () => {
-      await loadFonts();
-      setFontsLoaded(true);
-    };
-    loadAsyncFonts();
-  }, []);
+
 
 
   const PinModalRef = useRef(null);
-
   const [curDeal, setCurDeal] = useState({})
   const bottomSheetRef = useRef(null);
   const snapPoints = ["74%", "90%"];
   function handlePresentModal() {
-    bottomSheetRef?.current?.present();
+    bottomSheetRef.current?.present();
   }
-
-
   const [currentPin, setCurrentPin] = useState({
     title:"",
     location:{},
@@ -80,7 +68,6 @@ export default function MapScreen({ navigation }) {
     type:"",
     time:0,
   })
-
   const [pins, setPins] = useState([
     {
       title:"First", //user inpit (organization)
@@ -91,13 +78,12 @@ export default function MapScreen({ navigation }) {
       address: "", //figure out how to implement when clickig on pin, not user input
       description:"new location", //not required, user input
       deals: {
-        name:"", //the discounted item's name
-        discount:"", //either free or some percentage off
-        time:"", //default is all day for that day
+        name:"", 
+        discount:"",
+        time:"",
       },
       type: "",
-      time: "" //default is all time, users can choose to set a timer for the pin to disappear
-      //pin disappears after 7 days of NO DEALS at the place
+      time: "" 
     },
   ])
   const infoDataAddDeal = [
@@ -155,9 +141,8 @@ const infoDataMakePin = [
   const DealInfoSheet = useRef(null);
   const ReadMore = useRef(null)
   const TimeInfoSheet = useRef(null);
+  
   const [selectedIndices, setSelectedIndices] = useState([]);
-
-
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
   const [expanded, setExpanded] = useState(false);
@@ -174,6 +159,9 @@ const infoDataMakePin = [
   const [show, setShow] = useState(false);
   const [pinDeals, setPinDeals] = useState([]);
   const scaleAnimate = useRef(new Animated.Value(50)).current
+  const [currentAddress, setCurrentAddress] = useState("")
+  const [curDistMiles, setCurDistMiles] = useState("")
+  const [curDistMins, setCurDistMins] = useState("")
 
   const onChange = (event, selectedDate, identifier) => {
     const currentDate = selectedDate || (identifier === 'start' ? startDate : endDate);;
@@ -198,17 +186,60 @@ const infoDataMakePin = [
   const showTimepicker = () => {
     showMode('time');
   };
- 
 
+  async function fetchAddress(lat, long) {
+    const latlong = `${lat},${long}`;
+    const requestOptions = {
+      method: "GET",
+    };
+  
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlong}&key=${googleApiKey}`, requestOptions);
+      const result = await response.json();
+      
+      if (result.results && result.results.length > 0) {
+        return result.results[0].formatted_address;
+      } else {
+        throw new Error('No results found');
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      return 'Error fetching address'; // Or handle error as needed
+    }
+  }
+  
+  async function fetchDistance(originLat, originLong, destLat, destLong){
+    //dest and origin are lat long
+    let origin = `${originLat},${originLong}`
+    let destination = `${destLat},${destLong}`
+    const requestOptions = {
+      method: "GET",
+    };
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&origins=${origin}&destinations=${destination}&key=${googleApiKey}`, requestOptions);
+      const result = await response.json();
+      
+      if (result.rows && result.rows.length > 0 && result.rows[0].elements.length > 0) {
+        return [result.rows[0].elements[0].distance.text, result.rows[0].elements[0].duration.text]
+      } else {
+        throw new Error('No results found');
+      }
+    } catch (error) {
+      console.error('Error fetching address:', error);
+      return 'Error fetching address'; // Or handle error as needed
+    }
+  }
 
   const insertData = async (currentPin) => {
     try {
       let currentTimestamp = new Date().toISOString();
+      let lat = currentPin?.location.latitude
+      let long = currentPin?.location.longitude
       let newPin = {
         title: organization,
         description: pinDescription,
         location: currentPin?.location,
-        address: "String",
+        address: "string",
         deals: [],
         type: currentPin?.type,
         time: currentTimestamp
@@ -220,7 +251,7 @@ const infoDataMakePin = [
       if (error) {
           console.error("Error:", error);
       } else {
-          console.log("[SUCCESS] > Data inserted: ", data);
+          // console.log("[SUCCESS] > Data inserted: ", data);
           setPins([...pins, data[0]]);
           setLastAddedPinIndex(pins.length);
           setCurrentPin(data[0]);
@@ -331,7 +362,7 @@ useEffect(() => {
         .from('pins')
         .update({ deals: [...pin?.deals, deal] })
         .eq('id', pin?.id).then(() => {
-          console.log("Deal Added");
+          // console.log("Deal Added");
         }).then(async () => {
           await readDeals(pin).then(() => {
             CloseDealInfo();
@@ -366,15 +397,30 @@ useEffect(() => {
     }
   
     async function handlePinModalRef(id) {
-      console.log(id)
-      if(id) {
-        console.log("CLICKING")
+      // console.log(id);
+      if (id) {
+        // console.log("CLICKING");
         let tempPin = getPinWithId(id);
         setCurrentPin(tempPin);
+        
+        try {
+          const address = await fetchAddress(tempPin.location.latitude, tempPin.location.longitude);
+          const distanceInfo = await fetchDistance(currentRegion.latitude, currentRegion.longitude, tempPin.location.latitude, tempPin.location.longitude )
+          const distMiles = distanceInfo[0]
+          const distMinutes = distanceInfo[1]
+          setCurDistMiles(distMiles)
+          setCurDistMins(distMinutes)
+          setCurrentAddress(address); 
+
+        } catch (error) {
+          console.error("Error fetching address:", error);
+        }
+        
         await readDeals(tempPin);
         PinModalRef?.current?.present();
       }
     }
+
     function animateElement(){
       Animated.timing(scaleAnimate, {
         toValue: 100,
@@ -389,30 +435,14 @@ useEffect(() => {
 
     function sendToDatabase(){
       insertData(currentPin)
-      
       setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
       setSendButton(true)
       setCheckAllDay(false)
       PinInfoSheet.current?.close();
-      console.log(currentPin)
-      // insertData(currentPin)
-      // setBadge(true)
-      // setStartDate(initialDate)
-      // setEndDate(initialDate)
-      // insertData(currentPin)
-      // setPinDescription('')
-      // setOrganization('')
-      // setDayOfWeek([0,0,0,0,0,0,0])
-      // setSendButton(true)
-      // setCheckAllDay(false)
-      // PinInfoSheet.current?.close();
-      // insertData(currentPin)
-      // setIsPinConditionMet(false)
-      // // console.log("sent")
-      // //push downn the modal
     }
+
     function selectRepeatDays(day){
       let dayindex = weekName.indexOf(day)
       const newdayselect = dayofWeek.map((d,i)=> {
@@ -425,6 +455,7 @@ useEffect(() => {
       })
       setDayOfWeek(newdayselect)
     }
+
     function expandModal () {
       PinInfoSheet.current?.snapToIndex(1);
     }
@@ -442,7 +473,6 @@ useEffect(() => {
       setDayOfWeek(newdayselect)
     }
 
-
   const showLocations = () => {
     if(showPins){
       return pins.map((item, index) => {
@@ -455,6 +485,7 @@ useEffect(() => {
             onPress={() => {
               handlePinModalRef(item?.id)
             }}
+            // address = {item.address}
             description = {item.description}
             tracksViewChanges={false}
             >
@@ -476,19 +507,19 @@ useEffect(() => {
         type:"food",
         time:24,
       };
-
+      let lat = newPin.location.latitude
+      let long = newPin.location.longitude
 
       setCurrentPin({
         location: newPin.location,
+        address:"string",
         title:newPin.title,
         description:newPin.description,
         time:newPin.time,
         type:newPin.type,
       });
-
       createPinInfo();
-    }
-    
+    } 
   };
 
   function deletePin(){
@@ -871,7 +902,7 @@ useEffect(() => {
             }}>
               
               <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{currentPin?.title}</Text>
-              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
+              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>870 Echo Park Ave, Los Angeles, CA 90026 </Text>
               <View style = {{display:"flex", flexDirection:"row", gap:0}}>
                 <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
                 <Text style = {{fontSize:11, color:"#646567"}}> • 6.9 miles • </Text>
@@ -909,10 +940,10 @@ useEffect(() => {
             }}>
               
               <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{currentPin?.title}</Text>
-              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
+              <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>{currentAddress}</Text>
               <View style = {{display:"flex", flexDirection:"row", gap:0}}>
                 <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>{pinDeals.length} Active Deals</Text>
-                <Text style = {{fontSize:11, color:"#646567"}}> • 6.9 miles • </Text>
+                <Text style = {{fontSize:11, color:"#646567"}}> • {curDistMiles} • </Text>
                 <Text style = {{fontSize:11, color:"#EF5002"}}>Reoccurring</Text>
               </View>
               <View style={{
@@ -970,9 +1001,9 @@ useEffect(() => {
               <View style = {{flex:1}}>
                 <Button
                 buttonStyle = {styles.actionButtons}
-                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                titleStyle={{fontWeight: "400", color:"black", fontSize: 12 }}
                 >
-                  <FontAwesome6 name="map" size={18} color="black" /> 17 Min</Button>
+                  <FontAwesome6 name="map" size={18} color="black" /> {curDistMins} </Button>
               </View>
               <View style = {{flex:1}}>
                 <Button
@@ -1073,7 +1104,6 @@ useEffect(() => {
           <TouchableOpacity
             style={[styles.userLocation, styles.shadow]}
             onPress={() => {
-              // console.log("Go to user location!");
               const { latitude, longitude } = location.coords;
               setCurrentRegion({ ...currentRegion, latitude, longitude });
             }}
@@ -1099,7 +1129,7 @@ useEffect(() => {
                   display:"flex",
                 }}>
                   
-                  <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>Hive</Text>
+                  <Text style = {{fontSize:18, fontWeight:600, marginBottom:5}}>Hive</Text>
                   <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:12}}>45 Deals Nearby</Text>
                   <View style={{
                     display:"flex",
@@ -1122,21 +1152,21 @@ useEffect(() => {
               <View style = {styles.categoryContainer}>
                 <Button buttonStyle = {styles.someButtonStyles}
                   title = "Bookmarks"
-                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  titleStyle={{ fontWeight: 500, color:"black", fontSize: 12, margin:3 }}
                   >
                 🎉 Big Groups</Button>
                 <Button
-                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  titleStyle={{ fontWeight: 500, color:"black", fontSize: 12, margin:3 }}
                   buttonStyle = {styles.someButtonStyles}
                   >
                 🍾 Special Occasions</Button>
                 <Button
-                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  titleStyle={{ fontWeight: 500, color:"black", fontSize: 12, margin:3 }}
                   buttonStyle = {styles.someButtonStyles}
                   >
                 🏠 Family Friends</Button>
                 <Button
-                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 12, margin:3 }}
+                  titleStyle={{ fontWeight: 500, color:"black", fontSize: 12, margin:3 }}
                   buttonStyle = {styles.someButtonStyles}
                   >
                 🍽 Restaurants</Button>
@@ -1147,21 +1177,21 @@ useEffect(() => {
               <View style = {{flex:1}}>
                 <Button
                 buttonStyle = {styles.actionButtons}
-                titleStyle={{ fontWeight: "500", color:"black", fontSize: 12 }}
+                titleStyle={{ fontWeight: 500, color:"black", fontSize: 12 }}
                 >
                   <FontAwesome6 name="add" size={18} color="black" /> blt blt</Button>
               </View>
               <View style = {{flex:1}}>
                 <Button
                 buttonStyle = {styles.actionButtons}
-                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                titleStyle={{ fontWeight: 400, color:"black", fontSize: 12 }}
                 >
                   <FontAwesome6 name="map" size={18} color="black" /> 17 Min</Button>
               </View>
               <View style = {{flex:1}}>
                 <Button
                 buttonStyle = {styles.actionButtons}
-                titleStyle={{ fontWeight: "400", color:"black", fontSize: 12 }}
+                titleStyle={{ fontWeight: 400, color:"black", fontSize: 12 }}
                 >
                   <FontAwesome6 name="heart" size={18} color="black" /> 71</Button>
               </View>
@@ -1174,8 +1204,8 @@ useEffect(() => {
                 <Pressable key={deal.id} onPress={DealInfo} style={styles.dealContainer}>
                   <Image style={styles.dealsImage} source={{ uri: deal.image }} />
                   <View style={styles.dealTextContainer}>
-                    <Text style={{ fontWeight: '400', fontSize: 16 }}>{deal.title}</Text>
-                    <Text style={{ marginTop: 4, fontSize: 13, color: "#646567" }}>{deal.description}</Text>
+                    <Text style={{ fontWeight: 400, fontSize:16 }}>{deal.title}</Text>
+                    <Text style={{ marginTop: 4, fontSize:13, color: "#646567" }}>{deal.description}</Text>
                   </View>
                   <Button
                     style={styles.buttonsInside}
@@ -1191,12 +1221,10 @@ useEffect(() => {
             </View>
             </View>
             <View style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontFamily: "Merriweather-Regular", fontSize: 13, color: "#9B9B9B" }}>View More</Text>
+              <Text style={{ fontFamily: "Merriweather-Regular", fontSize:13, color: "#9B9B9B" }}>View More</Text>
             </View>
-              </ScrollView>
-              
-
-
+            </ScrollView>
+            
             </View>
           </BottomSheetModal>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style = {styles.buttonScrollview}>
@@ -1204,7 +1232,7 @@ useEffect(() => {
               
                 <Button
                   style = {styles.buttonsInside}
-                  titleStyle={{ fontWeight: "500", color:"black", fontSize: 13, margin:3 }}
+                  titleStyle={{ fontWeight: 500, color:"black", fontSize: 13, margin:3 }}
                   buttonStyle={{
                     backgroundColor: '#EDEEEF',
                     borderRadius: 30,
@@ -1225,6 +1253,7 @@ useEffect(() => {
                 ><View><Image style = {{width:20, height:20, zIndex:10000}} source={require('../../assets/mapfeature/SingleBee.png')}
                 /></View>Hive</Button>
                 <Button
+                  onPress = {()=>fetchDistance(currentRegion.latitude, currentRegion.longitude, 37.331820,-122.03118)}
                   style = {styles.buttonsInside}
                   title="Places"
                   titleStyle={{ fontWeight: "500", color:"black", fontSize: 13, margin:3 }}

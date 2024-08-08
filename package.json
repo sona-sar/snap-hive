@@ -21,6 +21,7 @@
     "@rneui/base": "github:react-native-elements/react-native-elements#base",
     "@rneui/themed": "github:react-native-elements/react-native-elements#themed",
     "@supabase/supabase-js": "^2.44.4",
+    "dotenv": "^16.4.5",
     "expo": "^51.0.21",
     "expo-camera": "^15.0.14",
     "expo-config": "^1.0.0",
