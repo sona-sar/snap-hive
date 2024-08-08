@@ -212,15 +212,16 @@ const infoDataMakePin = [
       }
       const { data, error } = await supabase
           .from("pins") // 
-          .insert(newPin); // Insert the event data
+          .insert(newPin)
+          .select(); // Insert the event data
       if (error) {
           console.error("Error:", error);
       } else {
-          console.log("[SUCCESS] > Data inserted: ", newPin);
+          console.log("[SUCCESS] > Data inserted: ", data);
+          setPins([...pins, data[0]]);
+          setLastAddedPinIndex(pins.length);
+          setCurrentPin(data[0]);
       }
-      setPins([...pins, newPin]);
-      setLastAddedPinIndex(pins.length);
-      setCurrentPin(newPin);
     } catch (error) {
         console.error("Unexpected error:", error);
     }
@@ -348,14 +349,13 @@ useEffect(() => {
     }
   
     async function handlePinModalRef(id) {
+      console.log(id)
       if(id) {
+        console.log("CLICKING")
         let tempPin = getPinWithId(id);
         setCurrentPin(tempPin);
-        await readDeals(tempPin).then(() => {
-          // console.log(pinDeals);
-          PinModalRef?.current?.present();
-        });
-        
+        await readDeals(tempPin);
+        PinModalRef?.current?.present();
       }
     }
     function animateElement(){
@@ -435,7 +435,7 @@ useEffect(() => {
             key = {index}
             coordinate = {item.location}
             title = {item.title}
-            onPress={(e) => {
+            onPress={() => {
               handlePinModalRef(item?.id)
             }}
             description = {item.description}
