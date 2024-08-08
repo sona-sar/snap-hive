@@ -545,7 +545,7 @@ useEffect(() => {
   useEffect(() => {
     const startTime = String(startDate).split(" ")[4]
     const endTime = String(endDate).split(" ")[4]
-    if ((dealInformation !== '') && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay !== true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
+    if ((dealInformation !== '') && ((startTime !== "00:00:00" || endTime!== "00:00:00") || (checkAllDay === true))){ //(startTime !== "07:00:00") || (endTime!== "07:00:00")
       setIsPinConditionMet(true)
     }
     else{
@@ -564,10 +564,23 @@ useEffect(() => {
         style={styles.map}
         region={currentRegion}
         mapType="standard"
-        showsUserLocation={true}
+        showsUserLocation={false}
         showsMyLocationButton={true}
         onLongPress={handleMapPress}
       >
+        {location && (
+              <Marker
+                coordinate={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                }}
+              >
+                <Image
+                  source={require("../../assets/mapfeature/BeeBitmoji.png")}
+                  style={{ width: 100, height: 110 }}
+                />
+              </Marker>
+          )}
         {/* <View height={250} position={"relative"} width={250} backgroundColor={"red"} justifyContent={"center"} alignItems={"center"} display={true?"flex":"none"}>
           <Animated.Image source={require("../../assets/mapfeature/BeeInBasket.png")} style ={[animationStyle]}>
 
@@ -583,7 +596,7 @@ useEffect(() => {
       <BottomSheetModal
         ref={PinInfoSheet}
         index={0}
-        snapPoints={["61%"]}
+        snapPoints={["61%", "90%"]}
         onDismiss={deletePin}
       >
         <View>
@@ -898,7 +911,7 @@ useEffect(() => {
               <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{currentPin?.title}</Text>
               <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
               <View style = {{display:"flex", flexDirection:"row", gap:0}}>
-                <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
+                <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>{pinDeals.length} Active Deals</Text>
                 <Text style = {{fontSize:11, color:"#646567"}}> • 6.9 miles • </Text>
                 <Text style = {{fontSize:11, color:"#EF5002"}}>Reoccurring</Text>
               </View>
