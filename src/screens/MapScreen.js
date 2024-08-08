@@ -60,7 +60,7 @@ export default function MapScreen({ navigation }) {
 
   const PinModalRef = useRef(null);
 
-
+  const [curDeal, setCurDeal] = useState({})
   const bottomSheetRef = useRef(null);
   const snapPoints = ["74%", "90%"];
   function handlePresentModal() {
@@ -152,8 +152,8 @@ const infoDataMakePin = [
   const [sendButton, setSendButton] = useState(false);
   const [showPins, setShowPins] = useState(false); 
   const PinInfoSheet = useRef(null);
-  const [pinInfoModal, setPinInfoModal] = useState({});
-  const DealInfoSheet = useRef(null)
+  const DealInfoSheet = useRef(null);
+  const ReadMore = useRef(null)
   const TimeInfoSheet = useRef(null);
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
@@ -169,6 +169,7 @@ const infoDataMakePin = [
   const [endDate, setEndDate] = useState(initialDate);
   const [mode, setMode] = useState('time');
   const [show, setShow] = useState(false);
+  const [pinDeals, setPinDeals] = useState([]);
   const scaleAnimate = useRef(new Animated.Value(50)).current
 
   const onChange = (event, selectedDate, identifier) => {
@@ -194,27 +195,32 @@ const infoDataMakePin = [
   const showTimepicker = () => {
     showMode('time');
   };
+ 
 
 
   const insertData = async (currentPin) => {
     try {
       let currentTimestamp = new Date().toISOString();
+      let newPin = {
+        title: organization,
+        description: pinDescription,
+        location: currentPin?.location,
+        address: "String",
+        deals: [],
+        type: currentPin?.type,
+        time: currentTimestamp
+      }
       const { data, error } = await supabase
           .from("pins") // 
-          .insert({
-            title: organization,
-            description: pinDescription,
-            location: currentPin?.location,
-            address: "String",
-            deals: {},
-            type: currentPin?.type,
-            time: currentTimestamp
-          }); // Insert the event data
+          .insert(newPin); // Insert the event data
       if (error) {
           console.error("Error:", error);
       } else {
-          console.log("[SUCCESS] > Data inserted: ", data);
+          console.log("[SUCCESS] > Data inserted: ", newPin);
       }
+      setPins([...pins, newPin]);
+      setLastAddedPinIndex(pins.length);
+      setCurrentPin(newPin);
     } catch (error) {
         console.error("Unexpected error:", error);
     }
@@ -284,6 +290,13 @@ useEffect(() => {
     function DealInfo(){
       DealInfoSheet.current?.present();
     }
+    function ReadMoreInfo(deal){
+      setCurDeal(deal)
+      ReadMore.current?.present();
+    }
+    function CloseDealInfo() {
+      DealInfoSheet.current?.close();
+    }
     function CloseTime(){
       TimeInfoSheet.current?.close();
     }
@@ -293,6 +306,37 @@ useEffect(() => {
     function CloseType(){
       TypeInfoSheet.current?.close();
     }
+
+    async function addDeal(pin, deal) {
+      if(pin?.id) {
+        const { error } = await supabase
+        .from('pins')
+        .update({ deals: [...pin?.deals, deal] })
+        .eq('id', pin?.id).then(() => {
+          console.log("Deal Added");
+        }).then(async () => {
+          await readDeals(pin).then(() => {
+            CloseDealInfo();
+          })
+        }).catch((error) => {
+          console.error("Something went wrong while adding a deal: ", error);
+        });
+      }
+    }
+
+    async function readDeals(pin) {
+      try {
+          const { data, error } = await supabase.from('pins').select('*').eq('id', pin?.id);
+          if (error) {
+              console.error("Error fetching data:", error);
+          } else {
+              setPinDeals(data[0]?.deals)
+          }
+      } catch (error) {
+          console.error("Unexpected error:", error);
+      }
+    }
+
     function getPinWithId(id) {
       let temp = null;
       pins.map((pin) => {
@@ -303,12 +347,16 @@ useEffect(() => {
       return temp;
     }
   
-    function handlePinModalRef(id) {
+    async function handlePinModalRef(id) {
       if(id) {
         let tempPin = getPinWithId(id);
-        setPinInfoModal(tempPin);
+        setCurrentPin(tempPin);
+        await readDeals(tempPin).then(() => {
+          // console.log(pinDeals);
+          PinModalRef?.current?.present();
+        });
+        
       }
-      PinModalRef?.current?.present();
     }
     function animateElement(){
       Animated.timing(scaleAnimate, {
@@ -324,20 +372,29 @@ useEffect(() => {
 
     function sendToDatabase(){
       insertData(currentPin)
-      setBadge(true)
-      setStartDate(initialDate)
-      setEndDate(initialDate)
-      insertData(currentPin)
+      
       setPinDescription('')
       setOrganization('')
       setDayOfWeek([0,0,0,0,0,0,0])
       setSendButton(true)
       setCheckAllDay(false)
       PinInfoSheet.current?.close();
-      insertData(currentPin)
-      setIsPinConditionMet(false)
-      // console.log("sent")
-      //push downn the modal
+      console.log(currentPin)
+      // insertData(currentPin)
+      // setBadge(true)
+      // setStartDate(initialDate)
+      // setEndDate(initialDate)
+      // insertData(currentPin)
+      // setPinDescription('')
+      // setOrganization('')
+      // setDayOfWeek([0,0,0,0,0,0,0])
+      // setSendButton(true)
+      // setCheckAllDay(false)
+      // PinInfoSheet.current?.close();
+      // insertData(currentPin)
+      // setIsPinConditionMet(false)
+      // // console.log("sent")
+      // //push downn the modal
     }
     function selectRepeatDays(day){
       let dayindex = weekName.indexOf(day)
@@ -378,7 +435,7 @@ useEffect(() => {
             key = {index}
             coordinate = {item.location}
             title = {item.title}
-            onPress={() => {
+            onPress={(e) => {
               handlePinModalRef(item?.id)
             }}
             description = {item.description}
@@ -403,7 +460,7 @@ useEffect(() => {
         time:24,
       };
 
-      setPins([...pins, newPin]);
+
       setCurrentPin({
         location: newPin.location,
         title:newPin.title,
@@ -412,7 +469,6 @@ useEffect(() => {
         type:newPin.type,
       });
 
-      setLastAddedPinIndex(pins.length);
       createPinInfo();
     }
     
@@ -525,17 +581,18 @@ useEffect(() => {
           </View>
           
           <TextInput 
-          style={styles.input} 
-          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
-          value ={pinDescription}
+          style={styles.input}
+          onChangeText={(organization)=> setOrganization(organization)}
+          value ={organization}
           />
           <View flexDirection={"row"}>
           <Text style={styles.information}>Description</Text>
           </View>
           <TextInput 
-          style={styles.input}
-          onChangeText={(organization)=> setOrganization(organization)}
-          value ={organization}
+          style={styles.input} 
+          onChangeText={(pinDescription)=> setPinDescription(pinDescription)}
+          value ={pinDescription}
+          
           />
           {infoDataMakePin.map((item, index) => (
           <TouchableOpacity
@@ -554,7 +611,7 @@ useEffect(() => {
         </TouchableOpacity>
           ))}
           <Button
-          onPress = {()=>sendToDatabase()} 
+          onPress = {sendToDatabase} 
            buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
            style={styles.postPin}>
             <Text style={styles.sendButton}>Send</Text>
@@ -575,7 +632,7 @@ useEffect(() => {
             <Text style={styles.headerPinSheet}>Hive Deal</Text>
             <TouchableOpacity style={styles.exitCreatePin} onPress={deletePin}><Icon name="close" size="20"></Icon></TouchableOpacity>
           </View>
-          <Text style={styles.subheadingPinSheet}>Enter deals to thisuy7 pin.</Text>
+          <Text style={styles.subheadingPinSheet}>Enter deals to this pin.</Text>
           <View flexDirection={"row"}>
             <Text style={styles.information}>Deal Information</Text>
             <Text style={{color: "red"}}>*</Text>
@@ -603,24 +660,30 @@ useEffect(() => {
           </View>
           </TouchableOpacity>
           {infoDataAddDeal.map((item, index) => (
-          <TouchableOpacity
-          key={index}
-          style={styles.moreInfoContainer}
-          onPress={item.onPress}
-          disabled={item.disabled}
-          >
-          <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
-            <View flexDirection={"column"}>
-              <Text style={styles.moreInfoTitle}>{item.title}</Text>
-              <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
-            </View>
-            <Icon name="arrow-forward-ios" size={15} />
-          </View>
-        </TouchableOpacity>
+            <TouchableOpacity
+              key={index}
+              style={styles.moreInfoContainer}
+              onPress={item.onPress}
+              disabled={item.disabled}
+              >
+              <View flexDirection={"row"} alignItems={"center"} justifyContent={"space-between"}>
+                <View flexDirection={"column"}>
+                  <Text style={styles.moreInfoTitle}>{item.title}</Text>
+                  <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+                </View>
+                <Icon name="arrow-forward-ios" size={15} />
+              </View>
+            </TouchableOpacity>
           ))}
           <Button
           disabled={!isPinConditionMet}
-          onPress = {()=>sendToDatabase()} 
+          onPress = {async () => {
+            await addDeal(currentPin, {
+              title: dealInformation,
+              allDay: clickedUsers[0],
+              image: require('../../assets/images/dealsImage.png')
+            })  
+          }} 
            buttonStyle={{backgroundColor: '#0FADFF', borderRadius: 30, width: 370}} 
            style={styles.postPin}>
             <Text style={styles.sendButton}>Send</Text>
@@ -777,7 +840,7 @@ useEffect(() => {
               display:"flex",
             }}>
               
-              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{pinInfoModal?.title}</Text>
+              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{currentPin?.title}</Text>
               <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
               <View style = {{display:"flex", flexDirection:"row", gap:0}}>
                 <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
@@ -815,7 +878,7 @@ useEffect(() => {
               display:"flex",
             }}>
               
-              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{pinInfoModal?.title}</Text>
+              <Text style = {{fontSize:18, fontWeight:"600", marginBottom:5}}>{currentPin?.title}</Text>
               <Text style = {{ color:"#646567", fontSize:11, marginBottom:5}}>860 Echo Park Ave, Los Angeles, CA 90026 </Text>
               <View style = {{display:"flex", flexDirection:"row", gap:0}}>
                 <Text style = {{marginBottom:4, color:"#1A9964", fontWeight:400, fontSize:11}}>23 Active Deals</Text>
@@ -891,17 +954,19 @@ useEffect(() => {
               </View>
             </View>
           </View>
-
+          {pinDeals?.length > 0 ? (
           <ScrollView > 
             <View style = {{paddingTop:6, paddingBottom:6, borderRadius:10, marginLeft:20, marginTop:20, marginRight:20, backgroundColor:"white",  shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.1, shadowRadius: 3,}}>
-            <View style={styles.dealsContainer}>
-              {deals.map((deal) => (
-                <Pressable key={deal.id} onPress={DealInfo} style={styles.dealContainer}>
+
+              <View style={styles.dealsContainer}>
+              {pinDeals?.map((deal, index) => (
+                <Pressable key={index} onPress={() => {
+                  ReadMoreInfo(deal);
+                }} style={styles.dealContainer}>
                   <Image style={styles.dealsImage} source={deal.image} />
                   <View style={styles.dealTextContainer}>
                     <Text style={{ fontWeight: '400', fontSize: 16 }}>{deal.title}</Text>
-                    <Text style={{ marginTop: 4, fontSize: 13, color: "#646567" }}>{deal.description}</Text>
-                  </View>
+                  </View> 
                   <Button
                     style={styles.buttonsInside}
                     buttonStyle={{
@@ -914,20 +979,24 @@ useEffect(() => {
                 </Pressable>
               ))}
             </View>
+            
             </View>
             <View style={{ marginTop: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontFamily: "Merriweather-Regular", fontSize: 13, color: "#9B9B9B" }}>View More</Text>
             </View>
           </ScrollView>
-              
+              ) : null}
 
-        
-          {/* <View style = {styles.pinInformationContainers}>
-            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{pinInfoModal?.title}</Text>
-            <Text>{pinInfoModal?.description}</Text>
+        <BottomSheetModal
+          ref = {ReadMore}
+          index={0}
+          snapPoints={snapPoints}>
+            
+          <View style = {styles.pinInformationContainers}>
+            <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:16, marginBottom:10,}}>{curDeal.title}</Text>
+            <Text>{currentPin?.title}</Text>
           </View>
-           */}
-          {/* <View style = {styles.pinInformationContainers}>
+          <View style = {styles.pinInformationContainers}>
             <View style = {styles.infoTimeSection}>
               <Text style = {{color:"#C1C1C1", fontWeight:"bold",fontSize:14, marginBottom:10,}}>Time</Text>
               <View style = {{display:"flex", flexDirection:"row", gap:10, alignItems:"center"}}>
@@ -964,7 +1033,10 @@ useEffect(() => {
               </View>
             </View>
 
-          </View> */}
+          </View>
+        </BottomSheetModal>
+             
+          
       </BottomSheetModal>
       <View style={[styles.mapFooter, expanded ? styles.expanded : null]}> 
         <View style={styles.locationContainer}>
