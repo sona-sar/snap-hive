@@ -398,8 +398,9 @@ useEffect(() => {
   
     async function handlePinModalRef(id) {
       // console.log(id);
+      console.log("CLICKING");
+
       if (id) {
-        // console.log("CLICKING");
         let tempPin = getPinWithId(id);
         setCurrentPin(tempPin);
         
@@ -483,7 +484,7 @@ useEffect(() => {
             coordinate = {item.location}
             title = {item.title}
             onPress={() => {
-              handlePinModalRef(item?.id)
+              handlePinModalRef(item.id)
             }}
             // address = {item.address}
             description = {item.description}
@@ -741,7 +742,9 @@ useEffect(() => {
           onPress = {async () => {
             await addDeal(currentPin, {
               title: dealInformation,
-              allDay: clickedUsers[0],
+              allDay: [0],
+              time:24,
+              repeat:[0,0,0,0,0,0,0],
               image: require('../../assets/images/dealsImage.png')
             })  
           }} 
