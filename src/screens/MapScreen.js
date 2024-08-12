@@ -635,9 +635,8 @@ export default function MapScreen({ navigation }) {
       dealInformation !== "" &&
       (startTime !== "00:00:00" ||
         endTime !== "00:00:00" ||
-        checkAllDay === true)
+        clickedUsers[0] === true)
     ) {
-      //(startTime !== "07:00:00") || (endTime!== "07:00:00")
       setIsPinConditionMet(true);
     } else {
       setIsPinConditionMet(false);
@@ -671,14 +670,6 @@ export default function MapScreen({ navigation }) {
               />
             </Marker>
           )}
-          {/* <View height={250} position={"relative"} width={250} backgroundColor={"red"} justifyContent={"center"} alignItems={"center"} display={true?"flex":"none"}>
-          <Animated.Image source={require("../../assets/mapfeature/BeeInBasket.png")} style ={[animationStyle]}>
-
-          </Animated.Image>
-          <Pressable position={"absolute"} height={50} width={"50%"} backgroundColor={"purple"} marginTop={15} onPress={() => {setBadge(false)}}>
-
-          </Pressable>
-        </View> */}
           {showLocations()}
         </MapView>
 
@@ -1379,7 +1370,7 @@ export default function MapScreen({ navigation }) {
             </ScrollView>
           ) : null}
 
-          <BottomSheetModal ref={ReadMore} index={0} snapPoints={snapPoints}>
+          <BottomSheetModal ref={ReadMore} index={0} snapPoints={["55%"]}>
             <View style={styles.pinInformationContainers}>
               <Text
                 style={{
@@ -1468,9 +1459,6 @@ export default function MapScreen({ navigation }) {
                       return (
                         <Pressable
                           key={makeKey}
-                          onPress={() => {
-                            selectRepeatDays(week);
-                          }}
                           style={{
                             height: 35,
                             width: 35,
@@ -1498,31 +1486,6 @@ export default function MapScreen({ navigation }) {
                         </Pressable>
                       );
                     })}
-                </View>
-              </View>
-
-              <View style={{ marginTop: 20 }}>
-                <Text
-                  style={{
-                    color: "#C1C1C1",
-                    fontWeight: "bold",
-                    fontSize: 14,
-                    marginBottom: 10,
-                  }}
-                >
-                  Community Filters
-                </Text>
-                <View
-                  style={{ display: "flex", flexDirection: "row", gap: 10 }}
-                >
-                  <Image
-                    style={{ borderRadius: 100, height: 35, width: 35 }}
-                    src="https://wallpapercave.com/wp/JTpVKUS.jpg"
-                  ></Image>
-                  <Image
-                    style={{ borderRadius: 100, height: 35, width: 35 }}
-                    src="https://letsenhance.io/static/8f5e523ee6b2479e26ecc91b9c25261e/1015f/MainAfter.jpg"
-                  ></Image>
                 </View>
               </View>
             </View>
@@ -1880,9 +1843,6 @@ export default function MapScreen({ navigation }) {
                     borderRadius: 30,
                   }}
                 />
-              </View>
-              <View>
-                <Text style={{ backgroundColor: "red" }}>View More</Text>
               </View>
             </ScrollView>
           </View>
