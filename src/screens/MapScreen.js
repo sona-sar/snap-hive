@@ -74,9 +74,9 @@ export default function MapScreen({ navigation }) {
 
   const infoDataMakePin = [
     {
-      title: "Time",
-      subtitle: "From what time is this deal available?",
-      onPress: TimeInfo,
+      title: "End Date",
+      subtitle: "When does this pin disappear (optional)",
+      onPress: DateInfo,
       disabled: false,
     },
     {
@@ -131,10 +131,10 @@ export default function MapScreen({ navigation }) {
   const DealInfoSheet = useRef(null);
   const ReadMore = useRef(null);
   const TimeInfoSheet = useRef(null);
-
-  const [selectedResourceType, setSelectedResourceType] = useState("");
+  const DateInfoSheet = useRef(null);
   const RepeatInfoSheet = useRef(null);
   const TypeInfoSheet = useRef(null);
+  const [selectedResourceType, setSelectedResourceType] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [checkAllDay, setCheckAllDay] = useState(true);
   const [dealInformation, setDealInformation] = useState("");
@@ -152,33 +152,10 @@ export default function MapScreen({ navigation }) {
   const [currentAddress, setCurrentAddress] = useState("");
   const [curDistMiles, setCurDistMiles] = useState("");
   const [curDistMins, setCurDistMins] = useState("");
-  const [markets, setMarkets] = useState([
-    {
-      id: 1,
-      title: "Trader Joes",
-      description: "Retail",
-      image: "https://logonoid.com/images/trader-joes-logo.png",
-    },
-    {
-      id: 2,
-      title: "Seeds of Hope",
-      description: "Community Garden",
-      image:
-        "https://www.seedsofhopela.org/uploads/1/1/8/5/118565408/published/sohlogo_4.png?1528757672",
-    },
-    {
-      id: 3,
-      title: "Vons",
-      description: "Grocery",
-      image: "https://download.logo.wine/logo/Vons/Vons-Logo.wine.png",
-    },
-    {
-      id: 4,
-      title: "Davids Truck",
-      description: "Grocery",
-      image: "https://logodix.com/logo/37412.jpg",
-    },
-  ]);
+  const [markets, setMarkets] = useState([]);
+  const [isThanksImageVisible, setIsThanksImageVisible] = useState(false);
+  const [isWelcomeImageVisible, setIsWelcomeImageVisible] = useState(true);
+
   const onChange = (event, selectedDate, identifier) => {
     const currentDate =
       selectedDate || (identifier === "start" ? startDate : endDate);
@@ -299,6 +276,8 @@ export default function MapScreen({ navigation }) {
         console.error("Error fetching data:", error);
       } else {
         setPins(data);
+        setMarkets(data?.slice(0, 4));
+        console.log(data?.slice(0, 4));
       }
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -309,7 +288,8 @@ export default function MapScreen({ navigation }) {
   };
   useEffect(() => {
     fetchData();
-    setMarkets(pins?.slice(0, 4));
+    // setMarkets(pins?.slice(0, 4));
+    // console.log(markets);
   }, []);
 
   const handleUserClick = () => {
@@ -358,6 +338,9 @@ export default function MapScreen({ navigation }) {
   function TimeInfo() {
     TimeInfoSheet.current?.present();
   }
+  function DateInfo() {
+    DateInfoSheet.current?.present();
+  }
   function RepeatInfo() {
     RepeatInfoSheet.current?.present();
   }
@@ -376,6 +359,9 @@ export default function MapScreen({ navigation }) {
   }
   function CloseTime() {
     TimeInfoSheet.current?.close();
+  }
+  function CloseDate() {
+    DateInfoSheet.current?.close();
   }
   function CloseRepeat() {
     RepeatInfoSheet.current?.close();
@@ -492,6 +478,7 @@ export default function MapScreen({ navigation }) {
     setSendButton(true);
     setCheckAllDay(false);
     PinInfoSheet.current?.close();
+    setIsThanksImageVisible(true);
   }
 
   function selectRepeatDays(day) {
@@ -649,6 +636,52 @@ export default function MapScreen({ navigation }) {
   return (
     <BottomSheetModalProvider>
       <View style={[styles.container, { marginBottom: tabBarHeight }]}>
+        {isWelcomeImageVisible && (
+          <Pressable
+            style={{
+              height: 400,
+              width: 400,
+              position: "absolute",
+              zIndex: 2,
+              top: 200,
+            }}
+            onPress={() => {
+              setIsWelcomeImageVisible(false);
+            }}
+          >
+            <Image
+              source={require("../../assets/mapfeature/WelcomeToHive.png")}
+              style={{
+                height: "100%",
+                width: "100%",
+                resizeMode: "contain",
+              }} // 125 85
+            />
+          </Pressable>
+        )}
+        {isThanksImageVisible && (
+          <Pressable
+            style={{
+              height: 400,
+              width: 400,
+              position: "absolute",
+              zIndex: 2,
+              top: 200,
+            }}
+            onPress={() => {
+              setIsThanksImageVisible(false);
+            }}
+          >
+            <Image
+              style={{
+                height: "100%",
+                width: "100%",
+                resizeMode: "contain",
+              }}
+              source={require("../../assets/mapfeature/ThanksForSharing.png")}
+            />
+          </Pressable>
+        )}
         <MapView
           style={styles.map}
           region={currentRegion}
@@ -862,8 +895,7 @@ export default function MapScreen({ navigation }) {
             justifyContent={"center"}
           >
             <Text style={styles.InfoHeader} marginBottom={15}>
-              {" "}
-              Time{" "}
+              Time
             </Text>
             <TouchableOpacity
               style={{
@@ -937,6 +969,48 @@ export default function MapScreen({ navigation }) {
             <Text style={styles.sendButton}>Save</Text>
           </Button>
         </BottomSheetModal>
+        <BottomSheetModal ref={DateInfoSheet} index={0} snapPoints={["35%"]}>
+          <Text style={styles.InfoHeader} marginBottom={15}>
+            End Date
+          </Text>
+          <View
+            style={{
+              marginLeft: 15,
+              marginRight: 15,
+              flexDirection: "row",
+              alignContent: "center",
+              justifyContent: "space-between",
+            }}
+            flexDirection={"row"}
+            alignItems={"center"}
+            justifyContent={"space-between"}
+          >
+            <View flexDirection={"column"}>
+              <Text style={styles.moreInfoTitle}>Ends in</Text>
+              <Text style={styles.moreInfoSub}>
+                When does this location leave?
+              </Text>
+            </View>
+            <DateTimePicker
+              testID="dateTimePicker"
+              value={startDate}
+              mode={"date"}
+              is24Hour={true}
+              textColor="red"
+            />
+          </View>
+          <Button
+            buttonStyle={{
+              backgroundColor: "#0FADFF",
+              borderRadius: 30,
+              width: 370,
+            }}
+            style={styles.postPin}
+            onPress={CloseDate}
+          >
+            <Text style={styles.sendButton}>Save</Text>
+          </Button>
+        </BottomSheetModal>
         <BottomSheetModal ref={RepeatInfoSheet} index={0} snapPoints={["45%"]}>
           <View
             style={{ position: "relative" }}
@@ -945,8 +1019,7 @@ export default function MapScreen({ navigation }) {
             justifyContent={"center"}
           >
             <Text style={styles.InfoHeader} marginBottom={15}>
-              {" "}
-              Repeat{" "}
+              Repeat
             </Text>
             <TouchableOpacity
               style={{
@@ -983,7 +1056,7 @@ export default function MapScreen({ navigation }) {
             {weekName.map((week) => {
               return (
                 <Pressable
-                  key={makeKey}
+                  key={makeKey(8)}
                   onPress={() => {
                     selectRepeatDays(week);
                   }}
@@ -1359,7 +1432,6 @@ export default function MapScreen({ navigation }) {
               >
                 <Text
                   style={{
-                    fontFamily: "Merriweather-Regular",
                     fontSize: 13,
                     color: "#9B9B9B",
                   }}
@@ -1458,7 +1530,7 @@ export default function MapScreen({ navigation }) {
                     weekName.map((week) => {
                       return (
                         <Pressable
-                          key={makeKey}
+                          key={makeKey(8)}
                           style={{
                             height: 35,
                             width: 35,
@@ -1734,7 +1806,6 @@ export default function MapScreen({ navigation }) {
                     >
                       <Text
                         style={{
-                          fontFamily: "Merriweather-Regular",
                           fontSize: 13,
                           color: "#9B9B9B",
                         }}
@@ -1772,6 +1843,7 @@ export default function MapScreen({ navigation }) {
                     setShowPins(true);
                     setExpanded(true);
                     handlePresentModal();
+                    setIsWelcomeImageVisible(false);
                   }}
                   style={styles.buttonsInside}
                   titleStyle={{
