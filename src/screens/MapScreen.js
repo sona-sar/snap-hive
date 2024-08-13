@@ -313,7 +313,8 @@ export default function MapScreen({ navigation }) {
             height: 100,
             width: 100,
             borderRadius: 50,
-            backgroundColor: `${isSelected ? "#0FADFF" : item.color}`,
+            backgroundColor: item.color,
+            opacity: isSelected ? 0.3 : 1,
             justifyContent: "center",
             alignItems: "center",
             margin: 10,
@@ -527,11 +528,22 @@ export default function MapScreen({ navigation }) {
           >
             <Image
               style={{ height: 50, width: 40 }}
-              source={
-                item?.type === "Community Garden"
-                  ? require("../../assets/mapfeature/BeePinGreen.png")
-                  : require("../../assets/mapfeature/BeePin.png")
-              }
+              source={(() => {
+                switch (item?.type) {
+                  case "Grocery Store":
+                    return require("../../assets/mapfeature/BeePinGreen.png");
+                  case "Community Garden":
+                    return require("../../assets/mapfeature/BeePinYellow.png");
+                  case "Snap EBT":
+                    return require("../../assets/mapfeature/BeePinPurple.png");
+                  case "Restaurant":
+                    return require("../../assets/mapfeature/BeePinPink.png");
+                  case "Food Pantry":
+                    return require("../../assets/mapfeature/BeePinBlue.png");
+                  default:
+                    return require("../../assets/mapfeature/BeePinYellow.png");
+                }
+              })()}
             />
           </Marker>
         );
@@ -1626,7 +1638,7 @@ export default function MapScreen({ navigation }) {
                         fontSize: 12,
                       }}
                     >
-                      45 Deals Nearby
+                      {pins.length} Pins Nearby
                     </Text>
                     <View
                       style={{
@@ -1762,7 +1774,9 @@ export default function MapScreen({ navigation }) {
                         {markets.map((deal) => (
                           <Pressable
                             key={deal.id}
-                            onPress={DealInfo}
+                            onPress={() => {
+                              handlePinModalRef(deal.id);
+                            }}
                             style={styles.dealContainer}
                           >
                             <Image
