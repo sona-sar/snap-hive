@@ -1,14 +1,10 @@
-import { Text, View, StyleSheet, Button, Image } from "react-native";
+import { Text, View, StyleSheet, Image, Pressable } from "react-native";
 import { colors } from "../../assets/themes/colors";
 import { fontHeader } from "../../assets/themes/font";
-import { Followers, More, Search } from "../../assets/snapchat/HeaderIcons";
-import { createStackNavigator } from "@react-navigation/stack";
-import { Pressable } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-const Stack = createStackNavigator();
-
-export default function Header({ title }) {
-  const navigation = useNavigation();
+import { Search } from "../../assets/snapchat/HeaderIcons";
+import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import { Button } from "@rneui/themed";
+export default function MapHeader({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.headerLeft}>
@@ -32,47 +28,32 @@ export default function Header({ title }) {
           <Search />
         </Pressable>
       </View>
-      <Text style={styles.title}>{title}</Text>
       <View style={styles.headerRight}>
-        <View style={[styles.followers, styles.buttons]}>
-          <Followers />
-        </View>
-        <View style={[styles.more, styles.buttons]}>
-          <More />
-        </View>
+        <Pressable>
+          <View style={[styles.more, styles.buttons]}>
+            <Button
+              style={styles.image1InButton}
+              buttonStyle={{ backgroundColor: "transparent" }}
+            >
+              <FontAwesome6 name="search" size={24} color="black" />
+            </Button>
+          </View>
+        </Pressable>
       </View>
     </View>
   );
 }
 
-let screenOptions = {
-  tabBarShowLabel: false,
-  headerLeft: () => (
-    <Button
-      onPress={() => {
-        signOut(auth)
-          .then(() => {
-            // Sign-out successful.
-            user = null;
-          })
-          .catch((error) => {
-            // An error happened.
-            // should we do something with that error??
-          });
-      }}
-      title="Log Out"
-    />
-  ),
-};
-
 const styles = StyleSheet.create({
   container: {
-    width: "100%",
     position: "absolute",
+    width: "100%",
+    height: 50,
     flexDirection: "row",
-    top: 40,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    top: 10,
+    left: 10,
+    paddingVertical: 0,
     justifyContent: "space-between",
     alignItems: "center",
   },
@@ -85,7 +66,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
   headerRight: {
     flexDirection: "row",
@@ -95,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     height: 44,
     width: 44,
-    backgroundColor: "white",
+    backgroundColor: "#ECECEC",
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
@@ -103,6 +84,10 @@ const styles = StyleSheet.create({
   profileImage: {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
+  },
+  image1InButton: {
+    width: 50,
+    height: 50,
+    resizeMode: "contain",
   },
 });

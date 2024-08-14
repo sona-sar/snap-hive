@@ -5,7 +5,9 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import dealsImage from "../../assets/images/dealsImage.png";
+import MapHeader from "../components/MapHeader";
 // require('dotenv').config();
+import Header from "../components/Header";
 
 const googleApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API;
 
@@ -381,22 +383,33 @@ export default function MapScreen({ navigation }) {
 
   async function addDeal(pin, deal) {
     if (pin?.id) {
-      const { error } = await supabase
+      // First, fetch the current pin data
+      const { data: currentPin, error: fetchError } = await supabase
         .from("pins")
-        .update({ deals: [...pin?.deals, deal] })
+        .select("deals")
         .eq("id", pin?.id)
-        .then(() => {
-          // console.log("Deal Added");
-        })
-        .then(async () => {
-          await readDeals(pin).then(() => {
-            CloseDealInfo();
-            resetDealsStates();
-          });
-        })
-        .catch((error) => {
-          console.error("Something went wrong while adding a deal: ", error);
-        });
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching current pin data:", fetchError);
+        return;
+      }
+
+      // Now update with the current deals plus the new deal
+      const { error: updateError } = await supabase
+        .from("pins")
+        .update({ deals: [...(currentPin.deals || []), deal] })
+        .eq("id", pin?.id);
+
+      if (updateError) {
+        console.error("Error updating pin with new deal:", updateError);
+        return;
+      }
+
+      // If successful, proceed with reading deals and resetting states
+      await readDeals(pin);
+      CloseDealInfo();
+      resetDealsStates();
     }
   }
 
@@ -646,476 +659,270 @@ export default function MapScreen({ navigation }) {
   text = JSON.stringify(location);
 
   return (
-    <BottomSheetModalProvider>
-      <View style={[styles.container, { marginBottom: tabBarHeight }]}>
-        {isWelcomeImageVisible && (
-          <Pressable
-            style={{
-              height: 400,
-              width: 400,
-              position: "absolute",
-              zIndex: 2,
-              top: 200,
-            }}
-            onPress={() => {
-              setIsWelcomeImageVisible(false);
-            }}
-          >
-            <Image
-              source={require("../../assets/mapfeature/WelcomeToHive.png")}
+    <>
+      <BottomSheetModalProvider>
+        <View style={[styles.container, { marginBottom: tabBarHeight }]}>
+          {isWelcomeImageVisible && (
+            <Pressable
               style={{
-                height: "100%",
-                width: "100%",
-                resizeMode: "contain",
-              }} // 125 85
-            />
-          </Pressable>
-        )}
-        {isThanksImageVisible && (
-          <Pressable
-            style={{
-              height: 400,
-              width: 400,
-              position: "absolute",
-              zIndex: 2,
-              top: 200,
-            }}
-            onPress={() => {
-              setIsThanksImageVisible(false);
-            }}
-          >
-            <Image
-              style={{
-                height: "100%",
-                width: "100%",
-                resizeMode: "contain",
+                height: 400,
+                width: 400,
+                position: "absolute",
+                zIndex: 2,
+                top: 200,
               }}
-              source={require("../../assets/mapfeature/ThanksForSharing.png")}
-            />
-          </Pressable>
-        )}
-        <MapView
-          style={styles.map}
-          region={currentRegion}
-          mapType="standard"
-          showsUserLocation={false}
-          showsMyLocationButton={true}
-          onLongPress={handleMapPress}
-        >
-          {location && (
-            <Marker
-              coordinate={{
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude,
+              onPress={() => {
+                setIsWelcomeImageVisible(false);
               }}
             >
               <Image
-                source={require("../../assets/mapfeature/BeeBitmoji.png")}
-                style={{ width: 100, height: 110 }}
+                source={require("../../assets/mapfeature/WelcomeToHive.png")}
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  resizeMode: "contain",
+                }} // 125 85
               />
-            </Marker>
+            </Pressable>
           )}
-          {showLocations()}
-        </MapView>
-
-        <BottomSheetModal
-          ref={PinInfoSheet}
-          index={0}
-          snapPoints={["61%", "90%"]}
-          onDismiss={deletePin}
-        >
-          <View>
-            <View flexDirection={"row"} alignItems={"center"}>
-              <Text style={styles.headerPinSheet}>Hive Pin</Text>
-              <TouchableOpacity
-                style={styles.exitCreatePin}
-                onPress={deletePin}
-              >
-                <Icon name="close" size="20"></Icon>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.subheadingPinSheet}>
-              Enter additional details about your resource pin below.
-            </Text>
-            <View flexDirection={"row"}>
-              <Text style={styles.information}>Organization Name</Text>
-              <Text style={{ color: "red" }}>*</Text>
-            </View>
-
-            <TextInput
-              style={styles.input}
-              onChangeText={(organization) => setOrganization(organization)}
-              value={organization}
-            />
-            <View flexDirection={"row"}>
-              <Text style={styles.information}>Description</Text>
-            </View>
-            <TextInput
-              style={styles.input}
-              onChangeText={(pinDescription) =>
-                setPinDescription(pinDescription)
-              }
-              value={pinDescription}
-            />
-            {infoDataMakePin.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.moreInfoContainer}
-                onPress={item.onPress}
-                disabled={item.disabled}
-              >
-                <View
-                  flexDirection={"row"}
-                  alignItems={"center"}
-                  justifyContent={"space-between"}
-                >
-                  <View flexDirection={"column"}>
-                    <Text style={styles.moreInfoTitle}>{item.title}</Text>
-                    <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
-                  </View>
-                  <Icon name="arrow-forward-ios" size={15} />
-                </View>
-              </TouchableOpacity>
-            ))}
-            <Button
-              onPress={sendToDatabase}
-              buttonStyle={{
-                backgroundColor: "#0FADFF",
-                borderRadius: 30,
-                width: 370,
-              }}
-              style={styles.postPin}
-            >
-              <Text style={styles.sendButton}>Send</Text>
-              <Icon color={"white"} name="send" size={"15"} />
-            </Button>
-          </View>
-        </BottomSheetModal>
-
-        <BottomSheetModal
-          ref={DealInfoSheet}
-          index={0}
-          snapPoints={["72%"]}
-          onDismiss={deletePin}
-        >
-          <View>
-            <View
+          {isThanksImageVisible && (
+            <Pressable
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginRight: 20,
-              }}
-              flexDirection={"row"}
-              alignItems={"center"}
-            >
-              <Text style={styles.headerPinSheet}>Hive Deal</Text>
-              <TouchableOpacity
-                style={styles.exitCreatePin}
-                onPress={deletePin}
-              >
-                <Icon name="close" size="20"></Icon>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.subheadingPinSheet}>
-              Enter deals to this pin.
-            </Text>
-            <View flexDirection={"row"}>
-              <Text style={styles.information}>Deal Information</Text>
-              <Text style={{ color: "red" }}>*</Text>
-            </View>
-
-            <TextInput
-              style={styles.input}
-              onChangeText={(dealInformation) =>
-                setDealInformation(dealInformation)
-              }
-              value={dealInformation}
-            />
-
-            <TouchableOpacity onPress={handleUserClick}>
-              <View paddingTop={30} style={styles.moreInfoContainer}>
-                <View
-                  flexDirection={"row"}
-                  alignItems={"center"}
-                  justifyContent={"space-between"}
-                >
-                  <View flexDirection={"column"}>
-                    <Text style={styles.moreInfoTitle}>All Day</Text>
-                    <Text style={styles.moreInfoSub}>
-                      This deal runs for 24 hours.
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name={
-                      clickedUsers[0] ? "checkmark-circle" : "ellipse-outline"
-                    }
-                    size={24}
-                    color={clickedUsers[0] ? "#3CB2E2" : "lightgrey"}
-                  />
-                </View>
-              </View>
-            </TouchableOpacity>
-            {infoDataAddDeal.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.moreInfoContainer}
-                onPress={item.onPress}
-                disabled={item.disabled}
-              >
-                <View
-                  flexDirection={"row"}
-                  alignItems={"center"}
-                  justifyContent={"space-between"}
-                >
-                  <View flexDirection={"column"}>
-                    <Text style={styles.moreInfoTitle}>{item.title}</Text>
-                    <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
-                  </View>
-                  <Icon name="arrow-forward-ios" size={15} />
-                </View>
-              </TouchableOpacity>
-            ))}
-            <Button
-              disabled={!isPinConditionMet}
-              onPress={async () => {
-                await addDeal(currentPin, {
-                  title: dealInformation,
-                  allDay: clickedUsers[0],
-                  time: { startDate, endDate },
-                  repeat: dayofWeek,
-                  image: require("../../assets/images/dealsImage.png"),
-                });
-              }}
-              buttonStyle={{
-                backgroundColor: "#0FADFF",
-                borderRadius: 30,
-                width: 370,
-              }}
-              style={styles.postPin}
-            >
-              <Text style={styles.sendButton}>Send</Text>
-              <Icon color={"white"} name="send" size={"15"} />
-            </Button>
-          </View>
-        </BottomSheetModal>
-
-        <BottomSheetModal ref={TimeInfoSheet} index={0} snapPoints={["45%"]}>
-          <View
-            style={{ position: "relative" }}
-            flexDirection={"row"}
-            alignItems={"center"}
-            justifyContent={"center"}
-          >
-            <Text style={styles.InfoHeader} marginBottom={15}>
-              Time
-            </Text>
-            <TouchableOpacity
-              style={{
-                width: "100",
-                height: "100",
-                borderRadius: "50",
-                padding: 5,
-                backgroundColor: "#EDEEEF",
+                height: 400,
+                width: 400,
                 position: "absolute",
-                right: 15,
-                top: 10,
+                zIndex: 2,
+                top: 200,
               }}
-              onPress={CloseTime}
+              onPress={() => {
+                setIsThanksImageVisible(false);
+              }}
             >
-              <Icon name="close" size="20"></Icon>
-            </TouchableOpacity>
-          </View>
+              <Image
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  resizeMode: "contain",
+                }}
+                source={require("../../assets/mapfeature/ThanksForSharing.png")}
+              />
+            </Pressable>
+          )}
+          <MapView
+            style={styles.map}
+            region={currentRegion}
+            mapType="standard"
+            showsUserLocation={false}
+            showsMyLocationButton={true}
+            onLongPress={handleMapPress}
+          >
+            {location && (
+              <Marker
+                coordinate={{
+                  latitude: location.coords.latitude,
+                  longitude: location.coords.longitude,
+                }}
+              >
+                <Image
+                  source={require("../../assets/mapfeature/BeeBitmoji.png")}
+                  style={{ width: 100, height: 110 }}
+                />
+              </Marker>
+            )}
+            {showLocations()}
+          </MapView>
 
-          <View style={styles.moreInfoContainer}>
-            <View
-              flexDirection={"row"}
-              alignItems={"center"}
-              justifyContent={"space-between"}
-            >
-              <View flexDirection={"column"}>
-                <Text style={styles.moreInfoTitle}>Start</Text>
-                <Text style={styles.moreInfoSub}>
-                  What time does this deal begin?
-                </Text>
-              </View>
-              <DateTimePicker
-                testID="dateTimePicker"
-                value={startDate}
-                mode={mode}
-                is24Hour={true}
-                textColor="red"
-                onChange={(event, date) => onChange(event, date, "start")}
-              />
-            </View>
-          </View>
-          <View color={"none"} padding={15}>
-            <View
-              flexDirection={"row"}
-              alignItems={"center"}
-              justifyContent={"space-between"}
-            >
-              <View flexDirection={"column"}>
-                <Text style={styles.moreInfoTitle}>End</Text>
-                <Text style={styles.moreInfoSub}>
-                  What time does this deal end?
-                </Text>
-              </View>
-              <DateTimePicker
-                testID="dateTimePicker"
-                value={endDate}
-                mode={mode}
-                is24Hour={true}
-                onChange={(event, date) => onChange(event, date, "end")}
-              />
-            </View>
-          </View>
-          <Button
-            buttonStyle={{
-              backgroundColor: "#0FADFF",
-              borderRadius: 30,
-              width: 370,
-            }}
-            style={styles.postPin}
-            onPress={CloseTime}
+          <BottomSheetModal
+            ref={PinInfoSheet}
+            index={0}
+            snapPoints={["61%", "90%"]}
+            onDismiss={deletePin}
           >
-            <Text style={styles.sendButton}>Save</Text>
-          </Button>
-        </BottomSheetModal>
-        <BottomSheetModal ref={DateInfoSheet} index={0} snapPoints={["35%"]}>
-          <Text style={styles.InfoHeader} marginBottom={15}>
-            End Date
-          </Text>
-          <View
-            style={{
-              marginLeft: 15,
-              marginRight: 15,
-              flexDirection: "row",
-              alignContent: "center",
-              justifyContent: "space-between",
-            }}
-            flexDirection={"row"}
-            alignItems={"center"}
-            justifyContent={"space-between"}
-          >
-            <View flexDirection={"column"}>
-              <Text style={styles.moreInfoTitle}>Ends in</Text>
-              <Text style={styles.moreInfoSub}>
-                When does this location leave?
-              </Text>
-            </View>
-            <DateTimePicker
-              testID="dateTimePicker"
-              value={startDate}
-              mode={"date"}
-              is24Hour={true}
-              textColor="red"
-            />
-          </View>
-          <Button
-            buttonStyle={{
-              backgroundColor: "#0FADFF",
-              borderRadius: 30,
-              width: 370,
-            }}
-            style={styles.postPin}
-            onPress={CloseDate}
-          >
-            <Text style={styles.sendButton}>Save</Text>
-          </Button>
-        </BottomSheetModal>
-        <BottomSheetModal ref={RepeatInfoSheet} index={0} snapPoints={["45%"]}>
-          <View
-            style={{ position: "relative" }}
-            flexDirection={"row"}
-            alignItems={"center"}
-            justifyContent={"center"}
-          >
-            <Text style={styles.InfoHeader} marginBottom={15}>
-              Repeat
-            </Text>
-            <TouchableOpacity
-              style={{
-                width: "100",
-                height: "100",
-                borderRadius: "50",
-                padding: 5,
-                backgroundColor: "#EDEEEF",
-                position: "absolute",
-                right: 15,
-                top: 10,
-              }}
-              onPress={CloseTime}
-            >
-              <Icon name="close" size="20"></Icon>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.moreInfoContainer}>
-            <View flexDirection={"column"}>
-              <Text style={styles.moreInfoTitle}>Repeat on</Text>
-              <Text style={styles.moreInfoSub}>
-                Select the day this deal repeats on.
-              </Text>
-            </View>
-          </View>
-          <View
-            flexDirection={"row"}
-            height={50}
-            width={"100%"}
-            justifyContent={"space-between"}
-            padding={10}
-            marginTop={20}
-          >
-            {weekName.map((week) => {
-              return (
-                <Pressable
-                  key={makeKey(8)}
-                  onPress={() => {
-                    selectRepeatDays(week);
-                  }}
-                  height={40}
-                  width={40}
-                  backgroundColor={
-                    dayofWeek[weekName.indexOf(week)] ? "#0FADFF" : "#EDEEEF"
-                  }
-                  borderRadius={20}
+            <View>
+              <View flexDirection={"row"} alignItems={"center"}>
+                <Text style={styles.headerPinSheet}>Hive Pin</Text>
+                <TouchableOpacity
+                  style={styles.exitCreatePin}
+                  onPress={deletePin}
                 >
-                  <Text
-                    style={{
-                      color: dayofWeek[weekName.indexOf(week)]
-                        ? "white"
-                        : "#0FADFF",
-                      fontWeight: "600",
-                      textAlign: "center",
-                      paddingVertical: 12,
-                    }}
+                  <Icon name="close" size="20"></Icon>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.subheadingPinSheet}>
+                Enter additional details about your resource pin below.
+              </Text>
+              <View flexDirection={"row"}>
+                <Text style={styles.information}>Organization Name</Text>
+                <Text style={{ color: "red" }}>*</Text>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                onChangeText={(organization) => setOrganization(organization)}
+                value={organization}
+              />
+              <View flexDirection={"row"}>
+                <Text style={styles.information}>Description</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                onChangeText={(pinDescription) =>
+                  setPinDescription(pinDescription)
+                }
+                value={pinDescription}
+              />
+              {infoDataMakePin.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.moreInfoContainer}
+                  onPress={item.onPress}
+                  disabled={item.disabled}
+                >
+                  <View
+                    flexDirection={"row"}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
                   >
-                    {week}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Button
-            buttonStyle={{
-              backgroundColor: "#0FADFF",
-              borderRadius: 30,
-              width: 370,
-            }}
-            style={styles.postPin}
-            onPress={CloseRepeat}
+                    <View flexDirection={"column"}>
+                      <Text style={styles.moreInfoTitle}>{item.title}</Text>
+                      <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+                    </View>
+                    <Icon name="arrow-forward-ios" size={15} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <Button
+                onPress={sendToDatabase}
+                buttonStyle={{
+                  backgroundColor: "#0FADFF",
+                  borderRadius: 30,
+                  width: 370,
+                }}
+                style={styles.postPin}
+              >
+                <Text style={styles.sendButton}>Send</Text>
+                <Icon color={"white"} name="send" size={"15"} />
+              </Button>
+            </View>
+          </BottomSheetModal>
+
+          <BottomSheetModal
+            ref={DealInfoSheet}
+            index={0}
+            snapPoints={["72%"]}
+            onDismiss={deletePin}
           >
-            <Text style={styles.sendButton}>Save</Text>
-          </Button>
-        </BottomSheetModal>
-        <BottomSheetModal ref={TypeInfoSheet} index={0} snapPoints={["64%"]}>
-          <View>
+            <View>
+              <View
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginRight: 20,
+                }}
+                flexDirection={"row"}
+                alignItems={"center"}
+              >
+                <Text style={styles.headerPinSheet}>Hive Deal</Text>
+                <TouchableOpacity
+                  style={styles.exitCreatePin}
+                  onPress={deletePin}
+                >
+                  <Icon name="close" size="20"></Icon>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.subheadingPinSheet}>
+                Enter deals to this pin.
+              </Text>
+              <View flexDirection={"row"}>
+                <Text style={styles.information}>Deal Information</Text>
+                <Text style={{ color: "red" }}>*</Text>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                onChangeText={(dealInformation) =>
+                  setDealInformation(dealInformation)
+                }
+                value={dealInformation}
+              />
+
+              <TouchableOpacity onPress={handleUserClick}>
+                <View paddingTop={30} style={styles.moreInfoContainer}>
+                  <View
+                    flexDirection={"row"}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
+                  >
+                    <View flexDirection={"column"}>
+                      <Text style={styles.moreInfoTitle}>All Day</Text>
+                      <Text style={styles.moreInfoSub}>
+                        This deal runs for 24 hours.
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={
+                        clickedUsers[0] ? "checkmark-circle" : "ellipse-outline"
+                      }
+                      size={24}
+                      color={clickedUsers[0] ? "#3CB2E2" : "lightgrey"}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+              {infoDataAddDeal.map((item, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.moreInfoContainer}
+                  onPress={item.onPress}
+                  disabled={item.disabled}
+                >
+                  <View
+                    flexDirection={"row"}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
+                  >
+                    <View flexDirection={"column"}>
+                      <Text style={styles.moreInfoTitle}>{item.title}</Text>
+                      <Text style={styles.moreInfoSub}>{item.subtitle}</Text>
+                    </View>
+                    <Icon name="arrow-forward-ios" size={15} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+              <Button
+                disabled={!isPinConditionMet}
+                onPress={async () => {
+                  await addDeal(currentPin, {
+                    title: dealInformation,
+                    allDay: clickedUsers[0],
+                    time: { startDate, endDate },
+                    repeat: dayofWeek,
+                    image: require("../../assets/images/dealsImage.png"),
+                  });
+                }}
+                buttonStyle={{
+                  backgroundColor: "#0FADFF",
+                  borderRadius: 30,
+                  width: 370,
+                }}
+                style={styles.postPin}
+              >
+                <Text style={styles.sendButton}>Send</Text>
+                <Icon color={"white"} name="send" size={"15"} />
+              </Button>
+            </View>
+          </BottomSheetModal>
+
+          <BottomSheetModal ref={TimeInfoSheet} index={0} snapPoints={["45%"]}>
             <View
               style={{ position: "relative" }}
               flexDirection={"row"}
               alignItems={"center"}
               justifyContent={"center"}
             >
-              <Text style={styles.InfoHeader}>Type</Text>
+              <Text style={styles.InfoHeader} marginBottom={15}>
+                Time
+              </Text>
               <TouchableOpacity
                 style={{
                   width: "100",
@@ -1132,17 +939,50 @@ export default function MapScreen({ navigation }) {
                 <Icon name="close" size="20"></Icon>
               </TouchableOpacity>
             </View>
-            <Text style={{ textAlign: "center", color: "#646567", size: 10 }}>
-              Select the type of resource
-            </Text>
-            <FlatList
-              data={resourceTypes}
-              renderItem={renderItem}
-              keyExtractor={(item) => item.type}
-              numColumns={3}
-              scrollEnabled={false}
-              contentContainerStyle={styles.gridContainer}
-            />
+
+            <View style={styles.moreInfoContainer}>
+              <View
+                flexDirection={"row"}
+                alignItems={"center"}
+                justifyContent={"space-between"}
+              >
+                <View flexDirection={"column"}>
+                  <Text style={styles.moreInfoTitle}>Start</Text>
+                  <Text style={styles.moreInfoSub}>
+                    What time does this deal begin?
+                  </Text>
+                </View>
+                <DateTimePicker
+                  testID="dateTimePicker"
+                  value={startDate}
+                  mode={mode}
+                  is24Hour={true}
+                  textColor="red"
+                  onChange={(event, date) => onChange(event, date, "start")}
+                />
+              </View>
+            </View>
+            <View color={"none"} padding={15}>
+              <View
+                flexDirection={"row"}
+                alignItems={"center"}
+                justifyContent={"space-between"}
+              >
+                <View flexDirection={"column"}>
+                  <Text style={styles.moreInfoTitle}>End</Text>
+                  <Text style={styles.moreInfoSub}>
+                    What time does this deal end?
+                  </Text>
+                </View>
+                <DateTimePicker
+                  testID="dateTimePicker"
+                  value={endDate}
+                  mode={mode}
+                  is24Hour={true}
+                  onChange={(event, date) => onChange(event, date, "end")}
+                />
+              </View>
+            </View>
             <Button
               buttonStyle={{
                 backgroundColor: "#0FADFF",
@@ -1150,791 +990,983 @@ export default function MapScreen({ navigation }) {
                 width: 370,
               }}
               style={styles.postPin}
-              onPress={CloseType}
+              onPress={CloseTime}
             >
               <Text style={styles.sendButton}>Save</Text>
             </Button>
-          </View>
-        </BottomSheetModal>
-        <BottomSheetModal ref={PinModalRef} index={0} snapPoints={snapPoints}>
-          <View
-            style={{
-              marginTop: 5,
-              marginLeft: 20,
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <View style={styles.imageContainer}>
-              <Image
-                style={styles.mainStories}
-                src="https://wallpapercave.com/wp/JTpVKUS.jpg"
-              ></Image>
-            </View>
+          </BottomSheetModal>
+          <BottomSheetModal ref={DateInfoSheet} index={0} snapPoints={["35%"]}>
+            <Text style={styles.InfoHeader} marginBottom={15}>
+              End Date
+            </Text>
             <View
               style={{
-                display: "flex",
+                marginLeft: 15,
+                marginRight: 15,
+                flexDirection: "row",
+                alignContent: "center",
+                justifyContent: "space-between",
               }}
+              flexDirection={"row"}
+              alignItems={"center"}
+              justifyContent={"space-between"}
             >
-              <Text
-                style={{ fontSize: 18, fontWeight: "600", marginBottom: 5 }}
-              >
-                {currentPin?.title}
-              </Text>
-              <Text style={{ color: "#646567", fontSize: 11, marginBottom: 5 }}>
-                870 Echo Park Ave, Los Angeles, CA 90026{" "}
-              </Text>
-              <View style={{ display: "flex", flexDirection: "row", gap: 0 }}>
-                <Text
-                  style={{
-                    marginBottom: 4,
-                    color: "#1A9964",
-                    fontWeight: 400,
-                    fontSize: 11,
-                  }}
-                >
-                  23 Active Deals
-                </Text>
-                <Text style={{ fontSize: 11, color: "#646567" }}>
-                  {" "}
-                  • 6.9 miles •{" "}
-                </Text>
-                <Text style={{ fontSize: 11, color: "#EF5002" }}>
-                  Reoccurring
+              <View flexDirection={"column"}>
+                <Text style={styles.moreInfoTitle}>Ends in</Text>
+                <Text style={styles.moreInfoSub}>
+                  When does this location leave?
                 </Text>
               </View>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: 4,
-                  alignItems: "center",
-                }}
-              >
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="staro" size={16} color="#0894FA" />
-                <Text style={{ fontSize: 12, color: "#646567" }}>
-                  2034 Shares
-                </Text>
-              </View>
+              <DateTimePicker
+                testID="dateTimePicker"
+                value={startDate}
+                mode={"date"}
+                is24Hour={true}
+                textColor="red"
+              />
             </View>
-          </View>
-        </BottomSheetModal>
-        <BottomSheetModal ref={PinModalRef} index={0} snapPoints={snapPoints}>
-          <View
-            style={{
-              marginTop: 5,
-              marginLeft: 20,
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 15,
-            }}
+            <Button
+              buttonStyle={{
+                backgroundColor: "#0FADFF",
+                borderRadius: 30,
+                width: 370,
+              }}
+              style={styles.postPin}
+              onPress={CloseDate}
+            >
+              <Text style={styles.sendButton}>Save</Text>
+            </Button>
+          </BottomSheetModal>
+          <BottomSheetModal
+            ref={RepeatInfoSheet}
+            index={0}
+            snapPoints={["45%"]}
           >
-            <View style={styles.imageContainer}>
-              <Image
-                style={styles.mainStories}
-                src="https://wallpapercave.com/wp/JTpVKUS.jpg"
-              ></Image>
+            <View
+              style={{ position: "relative" }}
+              flexDirection={"row"}
+              alignItems={"center"}
+              justifyContent={"center"}
+            >
+              <Text style={styles.InfoHeader} marginBottom={15}>
+                Repeat
+              </Text>
+              <TouchableOpacity
+                style={{
+                  width: "100",
+                  height: "100",
+                  borderRadius: "50",
+                  padding: 5,
+                  backgroundColor: "#EDEEEF",
+                  position: "absolute",
+                  right: 15,
+                  top: 10,
+                }}
+                onPress={CloseTime}
+              >
+                <Icon name="close" size="20"></Icon>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.moreInfoContainer}>
+              <View flexDirection={"column"}>
+                <Text style={styles.moreInfoTitle}>Repeat on</Text>
+                <Text style={styles.moreInfoSub}>
+                  Select the day this deal repeats on.
+                </Text>
+              </View>
             </View>
             <View
-              style={{
-                display: "flex",
-              }}
+              flexDirection={"row"}
+              height={50}
+              width={"100%"}
+              justifyContent={"space-between"}
+              padding={10}
+              marginTop={20}
             >
-              <Text
-                style={{ fontSize: 18, fontWeight: "600", marginBottom: 5 }}
-              >
-                {currentPin?.title}
-              </Text>
-              <Text style={{ color: "#646567", fontSize: 11, marginBottom: 5 }}>
-                {currentAddress}
-              </Text>
-              <View style={{ display: "flex", flexDirection: "row", gap: 0 }}>
-                <Text
-                  style={{
-                    marginBottom: 4,
-                    color: "#1A9964",
-                    fontWeight: 400,
-                    fontSize: 11,
-                  }}
-                >
-                  {pinDeals.length} Active Deals
-                </Text>
-                <Text style={{ fontSize: 11, color: "#646567" }}>
-                  {" "}
-                  • {curDistMiles} •{" "}
-                </Text>
-                <Text style={{ fontSize: 11, color: "#EF5002" }}>
-                  Reoccurring
-                </Text>
-              </View>
-              <View
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  gap: 4,
-                  alignItems: "center",
-                }}
-              >
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="star" size={16} color="#0894FA" />
-                <AntDesign name="staro" size={16} color="#0894FA" />
-                <Text style={{ fontSize: 12, color: "#646567" }}>
-                  2034 Shares
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryScrollView}
-            >
-              <View style={styles.categoryContainer}>
-                <Button
-                  buttonStyle={styles.someButtonStyles}
-                  title="Bookmarks"
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 12,
-                    margin: 3,
-                  }}
-                >
-                  🎉 Big Groups
-                </Button>
-                <Button
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 12,
-                    margin: 3,
-                  }}
-                  buttonStyle={styles.someButtonStyles}
-                >
-                  🍾 Special Occasions
-                </Button>
-                <Button
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 12,
-                    margin: 3,
-                  }}
-                  buttonStyle={styles.someButtonStyles}
-                >
-                  🏠 Family Friends
-                </Button>
-                <Button
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 12,
-                    margin: 3,
-                  }}
-                  buttonStyle={styles.someButtonStyles}
-                >
-                  🍽 Restaurants
-                </Button>
-              </View>
-            </ScrollView>
-
-            <View style={styles.shareContainer}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  onPress={DealInfo}
-                  buttonStyle={styles.actionButtons}
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 12,
-                  }}
-                >
-                  <FontAwesome6 name="add" size={18} color="black" /> Add New
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  buttonStyle={styles.actionButtons}
-                  titleStyle={{
-                    fontWeight: "400",
-                    color: "black",
-                    fontSize: 12,
-                  }}
-                >
-                  <FontAwesome6 name="map" size={18} color="black" />{" "}
-                  {curDistMins}{" "}
-                </Button>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  buttonStyle={styles.actionButtonsBlue}
-                  titleStyle={{
-                    fontWeight: "400",
-                    color: "black",
-                    fontSize: 12,
-                  }}
-                >
-                  <FontAwesome6 name="share" size={18} color="white" />
-                </Button>
-              </View>
-            </View>
-          </View>
-          {pinDeals?.length > 0 ? (
-            <ScrollView>
-              <View
-                style={{
-                  paddingTop: 6,
-                  paddingBottom: 6,
-                  borderRadius: 10,
-                  marginLeft: 20,
-                  marginTop: 20,
-                  marginRight: 20,
-                  backgroundColor: "white",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 3,
-                }}
-              >
-                <View style={styles.dealsContainer}>
-                  {pinDeals?.map((deal, index) => (
-                    <Pressable
-                      key={index}
-                      onPress={() => {
-                        ReadMoreInfo(deal);
+              {weekName.map((week) => {
+                return (
+                  <Pressable
+                    key={makeKey(8)}
+                    onPress={() => {
+                      selectRepeatDays(week);
+                    }}
+                    height={40}
+                    width={40}
+                    backgroundColor={
+                      dayofWeek[weekName.indexOf(week)] ? "#0FADFF" : "#EDEEEF"
+                    }
+                    borderRadius={20}
+                  >
+                    <Text
+                      style={{
+                        color: dayofWeek[weekName.indexOf(week)]
+                          ? "white"
+                          : "#0FADFF",
+                        fontWeight: "600",
+                        textAlign: "center",
+                        paddingVertical: 12,
                       }}
-                      style={styles.dealContainer}
                     >
-                      <Image style={styles.dealsImage} source={deal.image} />
-                      <View style={styles.dealTextContainer}>
-                        <Text style={{ fontWeight: "400", fontSize: 16 }}>
-                          {deal.title}
-                        </Text>
-                      </View>
-                      <Button
-                        style={styles.buttonsInside}
-                        buttonStyle={{
-                          backgroundColor: "transparent",
-                          borderRadius: 30,
-                        }}
-                      >
-                        <Icon name="chevron-right" color="black" />
-                      </Button>
-                    </Pressable>
-                  ))}
-                </View>
+                      {week}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Button
+              buttonStyle={{
+                backgroundColor: "#0FADFF",
+                borderRadius: 30,
+                width: 370,
+              }}
+              style={styles.postPin}
+              onPress={CloseRepeat}
+            >
+              <Text style={styles.sendButton}>Save</Text>
+            </Button>
+          </BottomSheetModal>
+          <BottomSheetModal ref={TypeInfoSheet} index={0} snapPoints={["64%"]}>
+            <View>
+              <View
+                style={{ position: "relative" }}
+                flexDirection={"row"}
+                alignItems={"center"}
+                justifyContent={"center"}
+              >
+                <Text style={styles.InfoHeader}>Type</Text>
+                <TouchableOpacity
+                  style={{
+                    width: "100",
+                    height: "100",
+                    borderRadius: "50",
+                    padding: 5,
+                    backgroundColor: "#EDEEEF",
+                    position: "absolute",
+                    right: 15,
+                    top: 10,
+                  }}
+                  onPress={CloseTime}
+                >
+                  <Icon name="close" size="20"></Icon>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ textAlign: "center", color: "#646567", size: 10 }}>
+                Select the type of resource
+              </Text>
+              <FlatList
+                data={resourceTypes}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.type}
+                numColumns={3}
+                scrollEnabled={false}
+                contentContainerStyle={styles.gridContainer}
+              />
+              <Button
+                buttonStyle={{
+                  backgroundColor: "#0FADFF",
+                  borderRadius: 30,
+                  width: 370,
+                }}
+                style={styles.postPin}
+                onPress={CloseType}
+              >
+                <Text style={styles.sendButton}>Save</Text>
+              </Button>
+            </View>
+          </BottomSheetModal>
+          <BottomSheetModal ref={PinModalRef} index={0} snapPoints={snapPoints}>
+            <View
+              style={{
+                marginTop: 5,
+                marginLeft: 20,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <View style={styles.imageContainer}>
+                <Image
+                  style={styles.mainStories}
+                  src="https://wallpapercave.com/wp/JTpVKUS.jpg"
+                ></Image>
               </View>
               <View
                 style={{
-                  marginTop: 20,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                 }}
               >
                 <Text
-                  style={{
-                    fontSize: 13,
-                    color: "#9B9B9B",
-                  }}
+                  style={{ fontSize: 18, fontWeight: "600", marginBottom: 5 }}
                 >
-                  View More
+                  {currentPin?.title}
                 </Text>
-              </View>
-            </ScrollView>
-          ) : null}
-
-          <BottomSheetModal ref={ReadMore} index={0} snapPoints={["55%"]}>
-            <View style={styles.pinInformationContainers}>
-              <Text
-                style={{
-                  color: "#C1C1C1",
-                  fontWeight: "bold",
-                  fontSize: 16,
-                  marginBottom: 10,
-                }}
-              >
-                {curDeal.title}
-              </Text>
-              <Text>{currentPin?.title}</Text>
-            </View>
-            <View style={styles.pinInformationContainers}>
-              <View style={styles.infoTimeSection}>
                 <Text
-                  style={{
-                    color: "#C1C1C1",
-                    fontWeight: "bold",
-                    fontSize: 14,
-                    marginBottom: 10,
-                  }}
+                  style={{ color: "#646567", fontSize: 11, marginBottom: 5 }}
                 >
-                  Time
+                  870 Echo Park Ave, Los Angeles, CA 90026{" "}
                 </Text>
+                <View style={{ display: "flex", flexDirection: "row", gap: 0 }}>
+                  <Text
+                    style={{
+                      marginBottom: 4,
+                      color: "#1A9964",
+                      fontWeight: 400,
+                      fontSize: 11,
+                    }}
+                  >
+                    23 Active Deals
+                  </Text>
+                  <Text style={{ fontSize: 11, color: "#646567" }}>
+                    {" "}
+                    • 6.9 miles •{" "}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: "#EF5002" }}>
+                    Reoccurring
+                  </Text>
+                </View>
                 <View
                   style={{
                     display: "flex",
                     flexDirection: "row",
-                    gap: 10,
+                    gap: 4,
                     alignItems: "center",
                   }}
                 >
-                  <View
-                    style={{
-                      backgroundColor: "#EDEEEF",
-                      paddingTop: 5,
-                      paddingBottom: 5,
-                      paddingRight: 15,
-                      paddingLeft: 15,
-                      borderRadius: 5,
-                    }}
-                  >
-                    <Text style={{ color: "#0CADEF", fontSize: 12 }}>
-                      {formatTime(curDeal?.time?.startDate)}
-                    </Text>
-                  </View>
-                  <Text style={{ color: "#0CADEF", fontWeight: "bold" }}>
-                    -
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="staro" size={16} color="#0894FA" />
+                  <Text style={{ fontSize: 12, color: "#646567" }}>
+                    2034 Shares
                   </Text>
-                  <View
-                    style={{
-                      backgroundColor: "#EDEEEF",
-                      paddingTop: 5,
-                      paddingBottom: 5,
-                      paddingRight: 15,
-                      paddingLeft: 15,
-                      borderRadius: 5,
-                    }}
-                  >
-                    <Text style={{ color: "#0CADEF", fontSize: 12 }}>
-                      {formatTime(curDeal?.time?.endDate)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={{ marginTop: 20 }}>
-                <Text
-                  style={{
-                    color: "#C1C1C1",
-                    fontWeight: "bold",
-                    fontSize: 14,
-                    marginBottom: 10,
-                  }}
-                >
-                  Repeat
-                </Text>
-                <View
-                  flexDirection={"row"}
-                  width={"100%"}
-                  justifyContent={"space-between"}
-                >
-                  {curDeal.repeat &&
-                    weekName.map((week) => {
-                      return (
-                        <Pressable
-                          key={makeKey(8)}
-                          style={{
-                            height: 35,
-                            width: 35,
-                            borderRadius: 100,
-                            display: "flex",
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                          backgroundColor={
-                            curDeal?.repeat[weekName.indexOf(week)]
-                              ? "#0FADFF"
-                              : "#EDEEEF"
-                          }
-                        >
-                          <Text
-                            style={{
-                              color: curDeal?.repeat[weekName.indexOf(week)]
-                                ? "white"
-                                : "#0FADFF",
-                              fontWeight: "500",
-                            }}
-                          >
-                            {week}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
                 </View>
               </View>
             </View>
           </BottomSheetModal>
-        </BottomSheetModal>
-        <View style={[styles.mapFooter, expanded ? styles.expanded : null]}>
-          <View style={styles.locationContainer}>
-            <TouchableOpacity
-              style={[styles.userLocation, styles.shadow]}
-              onPress={() => {
-                const { latitude, longitude } = location.coords;
-                setCurrentRegion({ ...currentRegion, latitude, longitude });
+          <BottomSheetModal ref={PinModalRef} index={0} snapPoints={snapPoints}>
+            <View
+              style={{
+                marginTop: 5,
+                marginLeft: 20,
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 15,
               }}
             >
-              <Ionicons name="navigate" size={15} color="black" />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.bitmojiContainer]}>
-            <BottomSheetModal
-              backgroundStyle={{ backgroundColor: "white" }}
-              ref={bottomSheetRef}
-              index={0}
-              snapPoints={snapPoints}
-            >
-              <View style={styles.modalContainer}>
-                <View style={styles.closeButton} type="solid" buttonStyle={{}}>
-                  <TouchableOpacity
-                    style={styles.exitCreatePin}
-                    onPress={deletePin}
+              <View style={styles.imageContainer}>
+                <Image
+                  style={styles.mainStories}
+                  src="https://wallpapercave.com/wp/JTpVKUS.jpg"
+                ></Image>
+              </View>
+              <View
+                style={{
+                  display: "flex",
+                }}
+              >
+                <Text
+                  style={{ fontSize: 18, fontWeight: "600", marginBottom: 5 }}
+                >
+                  {currentPin?.title}
+                </Text>
+                <Text
+                  style={{ color: "#646567", fontSize: 11, marginBottom: 5 }}
+                >
+                  {currentAddress}
+                </Text>
+                <View style={{ display: "flex", flexDirection: "row", gap: 0 }}>
+                  <Text
+                    style={{
+                      marginBottom: 4,
+                      color: "#1A9964",
+                      fontWeight: 400,
+                      fontSize: 11,
+                    }}
                   >
-                    <Icon name="close" size="20"></Icon>
-                  </TouchableOpacity>
+                    {pinDeals.length} Active Deals
+                  </Text>
+                  <Text style={{ fontSize: 11, color: "#646567" }}>
+                    {" "}
+                    • {curDistMiles} •{" "}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: "#EF5002" }}>
+                    Reoccurring
+                  </Text>
                 </View>
-
                 <View
                   style={{
-                    marginTop: -25,
-                    marginLeft: 20,
                     display: "flex",
                     flexDirection: "row",
+                    gap: 4,
                     alignItems: "center",
-                    gap: 10,
                   }}
                 >
-                  <View style={styles.imageContainer}>
-                    <Image
-                      style={styles.mainStories}
-                      src="https://wallpapercave.com/wp/JTpVKUS.jpg"
-                    ></Image>
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="star" size={16} color="#0894FA" />
+                  <AntDesign name="staro" size={16} color="#0894FA" />
+                  <Text style={{ fontSize: 12, color: "#646567" }}>
+                    2034 Shares
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.categoryScrollView}
+              >
+                <View style={styles.categoryContainer}>
+                  <Button
+                    buttonStyle={styles.someButtonStyles}
+                    title="Bookmarks"
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 12,
+                      margin: 3,
+                    }}
+                  >
+                    🎉 Big Groups
+                  </Button>
+                  <Button
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 12,
+                      margin: 3,
+                    }}
+                    buttonStyle={styles.someButtonStyles}
+                  >
+                    🍾 Special Occasions
+                  </Button>
+                  <Button
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 12,
+                      margin: 3,
+                    }}
+                    buttonStyle={styles.someButtonStyles}
+                  >
+                    🏠 Family Friends
+                  </Button>
+                  <Button
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 12,
+                      margin: 3,
+                    }}
+                    buttonStyle={styles.someButtonStyles}
+                  >
+                    🍽 Restaurants
+                  </Button>
+                </View>
+              </ScrollView>
+
+              <View style={styles.shareContainer}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    onPress={DealInfo}
+                    buttonStyle={styles.actionButtons}
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 12,
+                    }}
+                  >
+                    <FontAwesome6 name="add" size={18} color="black" /> Add New
+                  </Button>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    buttonStyle={styles.actionButtons}
+                    titleStyle={{
+                      fontWeight: "400",
+                      color: "black",
+                      fontSize: 12,
+                    }}
+                  >
+                    <FontAwesome6 name="map" size={18} color="black" />{" "}
+                    {curDistMins}{" "}
+                  </Button>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    buttonStyle={styles.actionButtonsBlue}
+                    titleStyle={{
+                      fontWeight: "400",
+                      color: "black",
+                      fontSize: 12,
+                    }}
+                  >
+                    <FontAwesome6 name="share" size={18} color="white" />
+                  </Button>
+                </View>
+              </View>
+            </View>
+            {pinDeals?.length > 0 ? (
+              <ScrollView>
+                <View
+                  style={{
+                    paddingTop: 6,
+                    paddingBottom: 6,
+                    borderRadius: 10,
+                    marginLeft: 20,
+                    marginTop: 20,
+                    marginRight: 20,
+                    backgroundColor: "white",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <View style={styles.dealsContainer}>
+                    {pinDeals?.map((deal, index) => (
+                      <Pressable
+                        key={index}
+                        onPress={() => {
+                          ReadMoreInfo(deal);
+                        }}
+                        style={styles.dealContainer}
+                      >
+                        <Image style={styles.dealsImage} source={deal.image} />
+                        <View style={styles.dealTextContainer}>
+                          <Text style={{ fontWeight: "400", fontSize: 16 }}>
+                            {deal.title}
+                          </Text>
+                        </View>
+                        <Button
+                          style={styles.buttonsInside}
+                          buttonStyle={{
+                            backgroundColor: "transparent",
+                            borderRadius: 30,
+                          }}
+                        >
+                          <Icon name="chevron-right" color="black" />
+                        </Button>
+                      </Pressable>
+                    ))}
                   </View>
+                </View>
+                <View
+                  style={{
+                    marginTop: 20,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#9B9B9B",
+                    }}
+                  >
+                    View More
+                  </Text>
+                </View>
+              </ScrollView>
+            ) : null}
+
+            <BottomSheetModal ref={ReadMore} index={0} snapPoints={["55%"]}>
+              <View style={styles.pinInformationContainers}>
+                <Text
+                  style={{
+                    color: "#C1C1C1",
+                    fontWeight: "bold",
+                    fontSize: 16,
+                    marginBottom: 10,
+                  }}
+                >
+                  {curDeal.title}
+                </Text>
+                <Text>{currentPin?.title}</Text>
+              </View>
+              <View style={styles.pinInformationContainers}>
+                <View style={styles.infoTimeSection}>
+                  <Text
+                    style={{
+                      color: "#C1C1C1",
+                      fontWeight: "bold",
+                      fontSize: 14,
+                      marginBottom: 10,
+                    }}
+                  >
+                    Time
+                  </Text>
                   <View
                     style={{
                       display: "flex",
+                      flexDirection: "row",
+                      gap: 10,
+                      alignItems: "center",
                     }}
                   >
-                    <Text
-                      style={{ fontSize: 18, fontWeight: 600, marginBottom: 5 }}
-                    >
-                      Hive
-                    </Text>
-                    <Text
+                    <View
                       style={{
-                        marginBottom: 4,
-                        color: "#1A9964",
-                        fontWeight: 400,
-                        fontSize: 12,
+                        backgroundColor: "#EDEEEF",
+                        paddingTop: 5,
+                        paddingBottom: 5,
+                        paddingRight: 15,
+                        paddingLeft: 15,
+                        borderRadius: 5,
                       }}
                     >
-                      {pins.length} Pins Nearby
+                      <Text style={{ color: "#0CADEF", fontSize: 12 }}>
+                        {formatTime(curDeal?.time?.startDate)}
+                      </Text>
+                    </View>
+                    <Text style={{ color: "#0CADEF", fontWeight: "bold" }}>
+                      -
                     </Text>
                     <View
                       style={{
-                        display: "flex",
-                        flexDirection: "row",
-                        gap: 4,
-                        alignItems: "center",
+                        backgroundColor: "#EDEEEF",
+                        paddingTop: 5,
+                        paddingBottom: 5,
+                        paddingRight: 15,
+                        paddingLeft: 15,
+                        borderRadius: 5,
                       }}
                     >
-                      <AntDesign name="star" size={16} color="#0894FA" />
-                      <AntDesign name="star" size={16} color="#0894FA" />
-                      <AntDesign name="star" size={16} color="#0894FA" />
-                      <AntDesign name="star" size={16} color="#0894FA" />
-                      <AntDesign name="staro" size={16} color="#0894FA" />
-                      <Text style={{ fontSize: 12, color: "#646567" }}>
-                        2034 Shares
+                      <Text style={{ color: "#0CADEF", fontSize: 12 }}>
+                        {formatTime(curDeal?.time?.endDate)}
                       </Text>
                     </View>
                   </View>
                 </View>
-                <View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.categoryScrollView}
+
+                <View style={{ marginTop: 20 }}>
+                  <Text
+                    style={{
+                      color: "#C1C1C1",
+                      fontWeight: "bold",
+                      fontSize: 14,
+                      marginBottom: 10,
+                    }}
                   >
-                    <View style={styles.categoryContainer}>
-                      <Button
-                        buttonStyle={styles.someButtonStyles}
-                        title="Bookmarks"
-                        titleStyle={{
-                          fontWeight: 500,
-                          color: "black",
-                          fontSize: 12,
-                          margin: 3,
-                        }}
-                      >
-                        🎉 Big Groups
-                      </Button>
-                      <Button
-                        titleStyle={{
-                          fontWeight: 500,
-                          color: "black",
-                          fontSize: 12,
-                          margin: 3,
-                        }}
-                        buttonStyle={styles.someButtonStyles}
-                      >
-                        🍾 Special Occasions
-                      </Button>
-                      <Button
-                        titleStyle={{
-                          fontWeight: 500,
-                          color: "black",
-                          fontSize: 12,
-                          margin: 3,
-                        }}
-                        buttonStyle={styles.someButtonStyles}
-                      >
-                        🏠 Family Friends
-                      </Button>
-                      <Button
-                        titleStyle={{
-                          fontWeight: 500,
-                          color: "black",
-                          fontSize: 12,
-                          margin: 3,
-                        }}
-                        buttonStyle={styles.someButtonStyles}
-                      >
-                        🍽 Restaurants
-                      </Button>
-                    </View>
-                  </ScrollView>
-                </View>
-                <View style={styles.shareContainer}>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      buttonStyle={styles.actionButtons}
-                      titleStyle={{
-                        fontWeight: 500,
-                        color: "black",
-                        fontSize: 12,
-                      }}
-                    >
-                      <FontAwesome6 name="add" size={18} color="black" /> blt
-                      blt
-                    </Button>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      buttonStyle={styles.actionButtons}
-                      titleStyle={{
-                        fontWeight: 400,
-                        color: "black",
-                        fontSize: 12,
-                      }}
-                    >
-                      <FontAwesome6 name="map" size={18} color="black" /> 17 Min
-                    </Button>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      buttonStyle={styles.actionButtons}
-                      titleStyle={{
-                        fontWeight: 400,
-                        color: "black",
-                        fontSize: 12,
-                      }}
-                    >
-                      <FontAwesome6 name="heart" size={18} color="black" /> 71
-                    </Button>
-                  </View>
-                </View>
-                {markets.length > 0 ? (
-                  <ScrollView>
-                    <View
-                      style={{
-                        paddingTop: 6,
-                        paddingBottom: 6,
-                        borderRadius: 10,
-                        marginLeft: 20,
-                        marginTop: 20,
-                        marginRight: 20,
-                        backgroundColor: "white",
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 0 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 3,
-                      }}
-                    >
-                      <View style={styles.dealsContainer}>
-                        {markets.map((deal) => (
+                    Repeat
+                  </Text>
+                  <View
+                    flexDirection={"row"}
+                    width={"100%"}
+                    justifyContent={"space-between"}
+                  >
+                    {curDeal.repeat &&
+                      weekName.map((week) => {
+                        return (
                           <Pressable
-                            key={deal.id}
-                            onPress={() => {
-                              handlePinModalRef(deal.id);
+                            key={makeKey(8)}
+                            style={{
+                              height: 35,
+                              width: 35,
+                              borderRadius: 100,
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
                             }}
-                            style={styles.dealContainer}
+                            backgroundColor={
+                              curDeal?.repeat[weekName.indexOf(week)]
+                                ? "#0FADFF"
+                                : "#EDEEEF"
+                            }
                           >
-                            <Image
-                              style={styles.dealsImage}
-                              source={dealsImage}
-                            />
-                            <View style={styles.dealTextContainer}>
-                              <Text style={{ fontWeight: 400, fontSize: 16 }}>
-                                {deal.title}
-                              </Text>
-                              <Text
-                                style={{
-                                  marginTop: 4,
-                                  fontSize: 13,
-                                  color: "#646567",
-                                }}
-                              >
-                                {deal.description}
-                              </Text>
-                            </View>
-                            <Button
-                              style={styles.buttonsInside}
-                              buttonStyle={{
-                                backgroundColor: "transparent",
-                                borderRadius: 30,
+                            <Text
+                              style={{
+                                color: curDeal?.repeat[weekName.indexOf(week)]
+                                  ? "white"
+                                  : "#0FADFF",
+                                fontWeight: "500",
                               }}
                             >
-                              <Icon name="chevron-right" color="black" />
-                            </Button>
+                              {week}
+                            </Text>
                           </Pressable>
-                        ))}
-                      </View>
+                        );
+                      })}
+                  </View>
+                </View>
+              </View>
+            </BottomSheetModal>
+          </BottomSheetModal>
+          <View style={[styles.mapFooter, expanded ? styles.expanded : null]}>
+            <View style={styles.locationContainer}>
+              <TouchableOpacity
+                style={[styles.userLocation, styles.shadow]}
+                onPress={() => {
+                  const { latitude, longitude } = location.coords;
+                  setCurrentRegion({ ...currentRegion, latitude, longitude });
+                }}
+              >
+                <Ionicons name="navigate" size={15} color="black" />
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.bitmojiContainer]}>
+              <BottomSheetModal
+                backgroundStyle={{ backgroundColor: "white" }}
+                ref={bottomSheetRef}
+                index={0}
+                snapPoints={snapPoints}
+              >
+                <View style={styles.modalContainer}>
+                  <View
+                    style={styles.closeButton}
+                    type="solid"
+                    buttonStyle={{}}
+                  >
+                    <TouchableOpacity
+                      style={styles.exitCreatePin}
+                      onPress={deletePin}
+                    >
+                      <Icon name="close" size="20"></Icon>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View
+                    style={{
+                      marginTop: -25,
+                      marginLeft: 20,
+                      display: "flex",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <View style={styles.imageContainer}>
+                      <Image
+                        style={styles.mainStories}
+                        src="https://wallpapercave.com/wp/JTpVKUS.jpg"
+                      ></Image>
                     </View>
                     <View
                       style={{
-                        marginTop: 20,
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 13,
-                          color: "#9B9B9B",
+                          fontSize: 18,
+                          fontWeight: 600,
+                          marginBottom: 5,
                         }}
                       >
-                        View More
+                        Hive
                       </Text>
+                      <Text
+                        style={{
+                          marginBottom: 4,
+                          color: "#1A9964",
+                          fontWeight: 400,
+                          fontSize: 12,
+                        }}
+                      >
+                        {pins.length} Pins Nearby
+                      </Text>
+                      <View
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          gap: 4,
+                          alignItems: "center",
+                        }}
+                      >
+                        <AntDesign name="star" size={16} color="#0894FA" />
+                        <AntDesign name="star" size={16} color="#0894FA" />
+                        <AntDesign name="star" size={16} color="#0894FA" />
+                        <AntDesign name="star" size={16} color="#0894FA" />
+                        <AntDesign name="staro" size={16} color="#0894FA" />
+                        <Text style={{ fontSize: 12, color: "#646567" }}>
+                          2034 Shares
+                        </Text>
+                      </View>
                     </View>
-                  </ScrollView>
-                ) : null}
-              </View>
-            </BottomSheetModal>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.buttonScrollview}
-            >
-              <View style={styles.buttonContainer}>
-                <Button
-                  style={styles.buttonsInside}
-                  titleStyle={{
-                    fontWeight: 500,
-                    color: "black",
-                    fontSize: 13,
-                    margin: 3,
-                  }}
-                  buttonStyle={{
-                    backgroundColor: "#EDEEEF",
-                    borderRadius: 30,
-                  }}
-                >
-                  <Icon name="search" color="black" />
-                </Button>
-                <Button
-                  onPress={() => {
-                    setShowPins(true);
-                    setExpanded(true);
-                    handlePresentModal();
-                    setIsWelcomeImageVisible(false);
-                  }}
-                  style={styles.buttonsInside}
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 13,
-                    margin: 3,
-                  }}
-                  buttonStyle={{
-                    backgroundColor: "#FFC000",
-                    borderRadius: 30,
-                  }}
-                >
-                  <View>
-                    <Image
-                      style={{ width: 20, height: 20, zIndex: 10000 }}
-                      source={require("../../assets/mapfeature/SingleBee.png")}
-                    />
                   </View>
-                  Hive
-                </Button>
-                <Button
-                  onPress={() =>
-                    fetchDistance(
-                      currentRegion.latitude,
-                      currentRegion.longitude,
-                      37.33182,
-                      -122.03118
-                    )
-                  }
-                  style={styles.buttonsInside}
-                  title="Places"
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 13,
-                    margin: 3,
-                  }}
-                  buttonStyle={{
-                    backgroundColor: "#EDEEEF",
-                    borderRadius: 30,
-                  }}
-                />
-                <Button
-                  style={styles.buttonsInside}
-                  title="Popular With Friends"
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 13,
-                    margin: 3,
-                  }}
-                  buttonStyle={{
-                    backgroundColor: "#EDEEEF",
-                    borderRadius: 30,
-                  }}
-                />
-                <Button
-                  style={styles.buttonsInside}
-                  title="Favorites"
-                  titleStyle={{
-                    fontWeight: "500",
-                    color: "black",
-                    fontSize: 13,
-                    margin: 3,
-                  }}
-                  buttonStyle={{
-                    backgroundColor: "#EDEEEF",
-                    borderRadius: 30,
-                  }}
-                />
-              </View>
-            </ScrollView>
+                  <View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.categoryScrollView}
+                    >
+                      <View style={styles.categoryContainer}>
+                        <Button
+                          buttonStyle={styles.someButtonStyles}
+                          title="Bookmarks"
+                          titleStyle={{
+                            fontWeight: 500,
+                            color: "black",
+                            fontSize: 12,
+                            margin: 3,
+                          }}
+                        >
+                          🎉 Big Groups
+                        </Button>
+                        <Button
+                          titleStyle={{
+                            fontWeight: 500,
+                            color: "black",
+                            fontSize: 12,
+                            margin: 3,
+                          }}
+                          buttonStyle={styles.someButtonStyles}
+                        >
+                          🍾 Special Occasions
+                        </Button>
+                        <Button
+                          titleStyle={{
+                            fontWeight: 500,
+                            color: "black",
+                            fontSize: 12,
+                            margin: 3,
+                          }}
+                          buttonStyle={styles.someButtonStyles}
+                        >
+                          🏠 Family Friends
+                        </Button>
+                        <Button
+                          titleStyle={{
+                            fontWeight: 500,
+                            color: "black",
+                            fontSize: 12,
+                            margin: 3,
+                          }}
+                          buttonStyle={styles.someButtonStyles}
+                        >
+                          🍽 Restaurants
+                        </Button>
+                      </View>
+                    </ScrollView>
+                  </View>
+                  <View style={styles.shareContainer}>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        buttonStyle={styles.actionButtons}
+                        titleStyle={{
+                          fontWeight: 500,
+                          color: "black",
+                          fontSize: 12,
+                        }}
+                      >
+                        <FontAwesome6 name="heart" size={18} color="black" /> 71
+                      </Button>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        buttonStyle={styles.actionButtons}
+                        titleStyle={{
+                          fontWeight: 400,
+                          color: "black",
+                          fontSize: 12,
+                        }}
+                      >
+                        <FontAwesome6 name="circle" size={18} color="black" />{" "}
+                        Filter
+                      </Button>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        buttonStyle={styles.actionButtonsBlue}
+                        titleStyle={{
+                          fontWeight: 400,
+                          color: "black",
+                          fontSize: 12,
+                        }}
+                      >
+                        <FontAwesome6 name="share" size={18} color="white" />
+                      </Button>
+                    </View>
+                  </View>
+                  {markets.length > 0 ? (
+                    <ScrollView>
+                      <View
+                        style={{
+                          paddingTop: 6,
+                          paddingBottom: 6,
+                          borderRadius: 10,
+                          marginLeft: 20,
+                          marginTop: 20,
+                          marginRight: 20,
+                          backgroundColor: "white",
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 0 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 3,
+                        }}
+                      >
+                        <View style={styles.dealsContainer}>
+                          {markets.map((deal) => (
+                            <Pressable
+                              key={deal.id}
+                              onPress={() => {
+                                handlePinModalRef(deal.id);
+                              }}
+                              style={styles.dealContainer}
+                            >
+                              <Image
+                                style={styles.dealsImage}
+                                source={dealsImage}
+                              />
+                              <View style={styles.dealTextContainer}>
+                                <Text style={{ fontWeight: 400, fontSize: 16 }}>
+                                  {deal.title}
+                                </Text>
+                                <Text
+                                  style={{
+                                    marginTop: 4,
+                                    fontSize: 13,
+                                    color: "#646567",
+                                  }}
+                                >
+                                  {deal.description}
+                                </Text>
+                              </View>
+                              <Button
+                                style={styles.buttonsInside}
+                                buttonStyle={{
+                                  backgroundColor: "transparent",
+                                  borderRadius: 30,
+                                }}
+                              >
+                                <Icon name="chevron-right" color="black" />
+                              </Button>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                      <View
+                        style={{
+                          marginTop: 20,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            color: "#9B9B9B",
+                          }}
+                        >
+                          View More
+                        </Text>
+                      </View>
+                    </ScrollView>
+                  ) : null}
+                </View>
+              </BottomSheetModal>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.buttonScrollview}
+              >
+                <View style={styles.buttonContainer}>
+                  <Button
+                    style={styles.buttonsInside}
+                    titleStyle={{
+                      fontWeight: 500,
+                      color: "black",
+                      fontSize: 13,
+                      margin: 3,
+                    }}
+                    buttonStyle={{
+                      backgroundColor: "#EDEEEF",
+                      borderRadius: 30,
+                    }}
+                  >
+                    <Icon name="search" color="black" />
+                  </Button>
+                  <Button
+                    onPress={() => {
+                      setShowPins(true);
+                      setExpanded(true);
+                      handlePresentModal();
+                      setIsWelcomeImageVisible(false);
+                    }}
+                    style={styles.buttonsInside}
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 13,
+                      margin: 3,
+                    }}
+                    buttonStyle={{
+                      backgroundColor: "#FFC000",
+                      borderRadius: 30,
+                    }}
+                  >
+                    <View>
+                      <Image
+                        style={{ width: 20, height: 20, zIndex: 10000 }}
+                        source={require("../../assets/mapfeature/SingleBee.png")}
+                      />
+                    </View>
+                    Hive
+                  </Button>
+                  <Button
+                    onPress={() =>
+                      fetchDistance(
+                        currentRegion.latitude,
+                        currentRegion.longitude,
+                        37.33182,
+                        -122.03118
+                      )
+                    }
+                    style={styles.buttonsInside}
+                    title="Places"
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 13,
+                      margin: 3,
+                    }}
+                    buttonStyle={{
+                      backgroundColor: "#EDEEEF",
+                      borderRadius: 30,
+                    }}
+                  />
+                  <Button
+                    style={styles.buttonsInside}
+                    title="Popular With Friends"
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 13,
+                      margin: 3,
+                    }}
+                    buttonStyle={{
+                      backgroundColor: "#EDEEEF",
+                      borderRadius: 30,
+                    }}
+                  />
+                  <Button
+                    style={styles.buttonsInside}
+                    title="Favorites"
+                    titleStyle={{
+                      fontWeight: "500",
+                      color: "black",
+                      fontSize: 13,
+                      margin: 3,
+                    }}
+                    buttonStyle={{
+                      backgroundColor: "#EDEEEF",
+                      borderRadius: 30,
+                    }}
+                  />
+                </View>
+              </ScrollView>
+            </View>
           </View>
         </View>
-      </View>
-    </BottomSheetModalProvider>
+      </BottomSheetModalProvider>
+      <Header></Header>
+    </>
   );
 }
 
@@ -2208,7 +2240,6 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
-
     backgroundColor: "#EDEEEF",
     borderRadius: 30,
   },
