@@ -8,7 +8,7 @@ import dealsImage from "../../assets/images/dealsImage.png";
 import MapHeader from "../components/MapHeader";
 // require('dotenv').config();
 import Header from "../components/Header";
-
+import { Clipboard } from "react-native";
 const googleApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API;
 
 import {
@@ -43,6 +43,17 @@ export default function MapScreen({ navigation }) {
   const [curDeal, setCurDeal] = useState({});
   const bottomSheetRef = useRef(null);
   const snapPoints = ["74%", "90%"];
+  const [copiedText, setCopiedText] = useState("");
+
+  const copyToClipboard = (address) => {
+    Clipboard.setString(address);
+    alert("Address is copied");
+  };
+
+  const fetchCopiedText = async () => {
+    const text = await Clipboard.getString();
+    setCopiedText(text);
+  };
   function handlePresentModal() {
     bottomSheetRef.current?.present();
   }
@@ -1400,6 +1411,9 @@ export default function MapScreen({ navigation }) {
                 <View style={{ flex: 1 }}>
                   <Button
                     buttonStyle={styles.actionButtonsBlue}
+                    onPress={() => {
+                      copyToClipboard(currentAddress);
+                    }}
                     titleStyle={{
                       fontWeight: "400",
                       color: "black",
