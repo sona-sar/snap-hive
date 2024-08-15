@@ -1428,6 +1428,8 @@ export default function MapScreen({ navigation }) {
             {pinDeals?.length > 0 ? (
               <ScrollView>
                 <View
+                  flex={1}
+                  onStartShouldSetResponder={() => true}
                   style={{
                     paddingTop: 6,
                     paddingBottom: 6,
@@ -1800,6 +1802,8 @@ export default function MapScreen({ navigation }) {
                   {markets.length > 0 ? (
                     <ScrollView>
                       <View
+                        flex={1}
+                        onStartShouldSetResponder={() => true}
                         style={{
                           paddingTop: 6,
                           paddingBottom: 6,
@@ -1863,6 +1867,9 @@ export default function MapScreen({ navigation }) {
                         }}
                       >
                         <Text
+                          onPress={() => {
+                            setMarkets(pins?.slice(0, 5));
+                          }}
                           style={{
                             fontSize: 13,
                             color: "#9B9B9B",
