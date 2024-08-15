@@ -34,6 +34,7 @@ EXPO_PUBLIC_GOOGLE_MAPS_API="Your Google Maps API Key"
 2. Note the URL and anon key for your Supabase project (to be used in the `.env.local` file)
 3. Go to the "Table Editor" in your Supabase project
 4. Upload the provided reference table file to create the necessary database structure
+[Download](./pins_rows.csv)
 
 ### Running the App
 
