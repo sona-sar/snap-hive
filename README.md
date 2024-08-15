@@ -33,4 +33,4 @@ $ git remote -v
 ```
 ##  Add Supabase Environment Variable!
 
-Get the code running! You'll need to rename `.env.example` to `.env.local` file. You should be able to reuse the Supabase keys from earlier's week project.
+Get the code running! You'll need to rename `.env.example` to `.env.local` file. You should be able to reuse the Supabase keys from earlier's week project.# snap-hive
