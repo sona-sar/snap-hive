@@ -1,36 +1,44 @@
-# Final Project Starter
+# Hive - Snapchat Prototype Feature 🐝
 
-This will be the starter code for your final project! But first, we're going to spend a day making improvements to it. We'll use pull requests to manage this, and for that you'll need to be on your own branch. You can work in pairs or on your own.
+Hive is a prototype feature created for the Snapchat app, which can be found on the Maps screen. It was developed by a team of Snap Academy Scholars for the year 2024, consisting of 2 engineers, 2 designers, and 3 marketers.
 
-## Fork the Repository 
-Click on the Fork button: This is usually found in the top-right corner of the repository's page. This will create a copy of the repository under your own GitHub account.
+## Getting Started
 
-## Clone the Forked Repository
-1. Go to your forked repository on GitHub.
-2. Click on the green "Code" button and copy the URL.
-3. Open your terminal or Git Bash and run: 
-```js
-$ git clone https://github.com/your-username/repository-name.git
+Follow these steps to set up and run the Hive project on your local machine.
+
+### Prerequisites
+
+- Node.js and npm (or yarn)
+- Visual Studio Code (or any preferred code editor)
+- Expo CLI
+- Supabase account
+- Google Maps API key
+
+### Installation
+
+1. Clone the repository
+   `git clone https://github.com/sona-sar/snap-hive.git`
+2. Open the project in Visual Studio Code
+3. Install dependencies
+   `npm install` or `yarn install`
+4. Create a `.env.local` file in the root directory with the following content:
+```cmd
+
+EXPO_PUBLIC_SUPABASE_URL="Your Supabase URL"
+EXPO_PUBLIC_SUPABASE_ANON_KEY="Your Supabase Key"
+EXPO_PUBLIC_GOOGLE_MAPS_API="Your Google Maps API Key"
 
 ```
-4. Navigate to the repository directory
+### Supabase Setup
+1. Create a new project in Supabase
+2. Note the URL and anon key for your Supabase project (to be used in the `.env.local` file)
+3. Go to the "Table Editor" in your Supabase project
+4. Upload the provided reference table file to create the necessary database structure
 
-# Install Yarn
-1. Run the following command to be able to run your program.
-```js
-$ git yarn install
-```
+### Running the App
 
-# Set Up the Upstream Remote
-1. Add the original repository as a remote: This allows you to pull in updates from the original repository.
-```js
-$ git remote add upstream https://github.com/Snap-Engineering-Academy-2024/SnapChatStarter.git
-```
-2. Verify the new remote named 'upstream'
+1. Start the Expo development server: `yarn expo start`
+2. Open the app on your phone using the Expo Go app or your preferred method
 
-```js
-$ git remote -v
-```
-##  Add Supabase Environment Variable!
 
-Get the code running! You'll need to rename `.env.example` to `.env.local` file. You should be able to reuse the Supabase keys from earlier's week project.# snap-hive
+
