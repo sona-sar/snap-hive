@@ -41,5 +41,6 @@ EXPO_PUBLIC_GOOGLE_MAPS_API="Your Google Maps API Key"
 1. Start the Expo development server: `yarn expo start`
 2. Open the app on your phone using the Expo Go app or your preferred method
 
+https://github.com/user-attachments/assets/ba27882f-81ed-4160-8b19-b0ba4566b1e8
 
 
