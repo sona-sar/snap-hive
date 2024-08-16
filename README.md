@@ -24,9 +24,9 @@ Follow these steps to set up and run the Hive project on your local machine.
 4. Create a `.env.local` file in the root directory with the following content:
 ```cmd
 
-EXPO_PUBLIC_SUPABASE_URL="Your Supabase URL"
-EXPO_PUBLIC_SUPABASE_ANON_KEY="Your Supabase Key"
-EXPO_PUBLIC_GOOGLE_MAPS_API="Your Google Maps API Key"
+EXPO_PUBLIC_SUPABASE_URL=<Your Supabase URL>
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<Your Supabase Key>
+EXPO_PUBLIC_GOOGLE_MAPS_API=<Your Google Maps API Key>
 
 ```
 ### Supabase Setup
