@@ -1,10 +1,4 @@
-
-<h1>
-  Hive
-  &nbsp;
-  <img src="hive_logo.png" alt="Logo" width="50" height="50" align="absmiddle">
-</h1>
-
+# Hive 🐝
    
 Hive is a prototype feature created for the Snapchat app, which can be found on the Maps screen. It was developed by our team of Snap Academy Scholars for the year 2024, consisting of 2 engineers, 2 designers, and 3 marketers.
 
@@ -47,6 +41,21 @@ EXPO_PUBLIC_GOOGLE_MAPS_API=<Your Google Maps API Key>
 1. Start the Expo development server: `yarn expo start`
 2. Open the app on your phone using the Expo Go app or your preferred method
 
+### Built With
+
+* [![React Native][ReactNative]][ReactNative-url]
+* [![Google Maps API][GoogleMaps]][GoogleMaps-url]
+* [![Supabase][Supabase]][Supabase-url]
+
+### Quick Demo
+
 https://github.com/user-attachments/assets/ba27882f-81ed-4160-8b19-b0ba4566b1e8
 
+[ReactNative]: https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[ReactNative-url]: https://reactnative.dev/
 
+[GoogleMaps]: https://img.shields.io/badge/Google_Maps_API-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white
+[GoogleMaps-url]: https://developers.google.com/maps
+
+[Supabase]: https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white
+[Supabase-url]: https://supabase.io/
