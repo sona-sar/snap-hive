@@ -1,5 +1,11 @@
-# Hive - Snapchat Prototype Feature 🐝
 
+<h1>
+  Hive
+  &nbsp;
+  <img src="hive_logo.png" alt="Logo" width="50" height="50" align="absmiddle">
+</h1>
+
+   
 Hive is a prototype feature created for the Snapchat app, which can be found on the Maps screen. It was developed by our team of Snap Academy Scholars for the year 2024, consisting of 2 engineers, 2 designers, and 3 marketers.
 
 ## Getting Started
